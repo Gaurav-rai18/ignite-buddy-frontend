@@ -26,16 +26,15 @@ export function useDashboard() {
     };
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
-    const controller = new AbortController();
+  const fetchDashboardData = useCallback(async (signal) => {
     setLoading(true);
     setError('');
 
     try {
       const [sumData, bData, budData] = await Promise.all([
-        dashboardService.getSummary({ signal: controller.signal }),
-        broadcastService.getBroadcasts({ signal: controller.signal }),
-        buddyService.getBuddySetting({ signal: controller.signal }),
+        dashboardService.getSummary({ signal }),
+        broadcastService.getBroadcasts({ signal }),
+        buddyService.getBuddySetting({ signal }),
       ]);
 
       if (isMountedRef.current) {
@@ -52,12 +51,12 @@ export function useDashboard() {
         setLoading(false);
       }
     }
-
-    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchDashboardData();
+    const controller = new AbortController();
+    fetchDashboardData(controller.signal);
+    return () => controller.abort();
   }, [fetchDashboardData]);
 
   const toggleBuddy = useCallback(async (onSuccess) => {

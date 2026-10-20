@@ -28,13 +28,12 @@ export function useSchedules() {
     };
   }, []);
 
-  const fetchSchedules = useCallback(async () => {
-    const controller = new AbortController();
+  const fetchSchedules = useCallback(async (signal) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await scheduleService.getSchedules({ signal: controller.signal });
+      const data = await scheduleService.getSchedules({ signal });
       if (isMountedRef.current) {
         setSchedules(data);
       }
@@ -47,12 +46,12 @@ export function useSchedules() {
         setLoading(false);
       }
     }
-
-    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchSchedules();
+    const controller = new AbortController();
+    fetchSchedules(controller.signal);
+    return () => controller.abort();
   }, [fetchSchedules]);
 
   const updateFormField = useCallback((field, value) => {

@@ -12,9 +12,9 @@ export function DocumentViewerModal({ isOpen, document, onClose }) {
       }
     }
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keydown', handleKeyDown);
     }
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen || !document) return null;

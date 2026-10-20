@@ -26,13 +26,12 @@ export function useBroadcasts() {
     };
   }, []);
 
-  const fetchBroadcasts = useCallback(async () => {
-    const controller = new AbortController();
+  const fetchBroadcasts = useCallback(async (signal) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await broadcastService.getBroadcasts({ signal: controller.signal });
+      const data = await broadcastService.getBroadcasts({ signal });
       if (isMountedRef.current) {
         setBroadcasts(data);
       }
@@ -45,12 +44,12 @@ export function useBroadcasts() {
         setLoading(false);
       }
     }
-
-    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchBroadcasts();
+    const controller = new AbortController();
+    fetchBroadcasts(controller.signal);
+    return () => controller.abort();
   }, [fetchBroadcasts]);
 
   const updateFormField = useCallback((field, value) => {

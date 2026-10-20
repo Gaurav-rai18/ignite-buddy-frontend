@@ -17,13 +17,12 @@ export function useBuddy() {
     };
   }, []);
 
-  const fetchBuddySetting = useCallback(async () => {
-    const controller = new AbortController();
+  const fetchBuddySetting = useCallback(async (signal) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await buddyService.getBuddySetting({ signal: controller.signal });
+      const data = await buddyService.getBuddySetting({ signal });
       if (isMountedRef.current) {
         setBuddy(data?.enabled ?? true);
       }
@@ -36,12 +35,12 @@ export function useBuddy() {
         setLoading(false);
       }
     }
-
-    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchBuddySetting();
+    const controller = new AbortController();
+    fetchBuddySetting(controller.signal);
+    return () => controller.abort();
   }, [fetchBuddySetting]);
 
   const toggleBuddy = useCallback(async (onSuccess) => {
