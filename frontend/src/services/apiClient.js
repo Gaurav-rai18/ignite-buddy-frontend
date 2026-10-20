@@ -73,10 +73,18 @@ async function request(path, { method = 'GET', body, headers = {}, signal, timeo
     }
 
     if (!res.ok) {
-      const message =
+      let message =
         (typeof data === 'object' && data?.detail) ||
-        (typeof data === 'object' && data?.message) ||
-        `Request failed with status ${res.status}`;
+        (typeof data === 'object' && data?.message);
+
+      if (!message) {
+        if (res.status === 404) {
+          message = `Endpoint ${path} was not found (404). Please verify backend is running.`;
+        } else {
+          message = `Request failed with status ${res.status}`;
+        }
+      }
+
       throw new ApiError(message, res.status, data);
     }
 

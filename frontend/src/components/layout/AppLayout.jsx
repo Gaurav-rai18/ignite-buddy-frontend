@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useLocation, Outlet } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { Footer } from './Footer';
 import { Toast } from '../ui/Toast';
+import { useAuth } from '../../hooks/useAuth';
 
 export function AppLayout({ broadcastCount = 0, toastMessage = '', onNotify }) {
   const [mobileNav, setMobileNav] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const getPageTitle = (pathname) => {
     switch (pathname) {
@@ -20,15 +23,21 @@ export function AppLayout({ broadcastCount = 0, toastMessage = '', onNotify }) {
         return 'Schedule';
       case '/buddy':
         return 'Buddy Control';
+      case '/users':
+        return 'Manage Users';
+      case '/documents':
+        return 'Add Documents';
       default:
         return 'Page Not Found';
     }
   };
 
   const handleSignOut = () => {
+    logout();
     if (onNotify) {
-      onNotify('Session reset: Logged out of demo administrator mode.');
+      onNotify('Signed out of Ignite Buddy Admin Console.');
     }
+    navigate('/login');
   };
 
   const pageTitle = getPageTitle(location.pathname);
@@ -49,7 +58,7 @@ export function AppLayout({ broadcastCount = 0, toastMessage = '', onNotify }) {
         />
         <div className="content">
           <div className="tcs-watermark" aria-hidden="true">
-            TCS
+            IGNITE BUDDY
           </div>
           <Outlet />
           <Footer />

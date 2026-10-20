@@ -15,7 +15,16 @@ export function formatErrorMessage(error) {
   }
 
   if (error.details) {
-    if (typeof error.details === 'string') return error.details;
+    if (typeof error.details === 'string') {
+      const isHtml = /<!DOCTYPE|<html|<head|<body/i.test(error.details);
+      if (isHtml) {
+        if (error.details.includes('Page not found') || error.status === 404) {
+          return 'Backend endpoint not found (404). Please verify that the Ignite Buddy Django backend is running on http://127.0.0.1:8000 and not another service.';
+        }
+        return `Backend returned an unexpected HTML response (HTTP ${error.status || 'unknown'}). Please check backend server logs.`;
+      }
+      return error.details;
+    }
     if (error.details.detail) return error.details.detail;
     // DRF field errors dictionary { field: ['error message'] }
     if (typeof error.details === 'object') {
@@ -27,6 +36,10 @@ export function formatErrorMessage(error) {
         .filter(Boolean);
       if (messages.length) return messages.join(' | ');
     }
+  }
+
+  if (error.status === 404) {
+    return 'The requested resource or endpoint was not found (404). Please verify the Django backend is running on http://127.0.0.1:8000.';
   }
 
   return error.message || 'Request failed. Please try again.';

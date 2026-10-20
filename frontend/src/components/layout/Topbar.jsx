@@ -29,7 +29,7 @@ export function Topbar({ onOpenMobileNav, pageTitle, onSignOut }) {
       </button>
 
       <div className="breadcrumb" aria-label="Breadcrumb">
-        <span className="breadcrumb-brand">TCS</span> Workspace <span>/</span> <b>{pageTitle}</b>
+        <span className="breadcrumb-brand">Ignite</span> Workspace <span>/</span> <b>{pageTitle}</b>
       </div>
 
       <div className="top-actions">

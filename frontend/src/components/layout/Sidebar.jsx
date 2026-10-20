@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Megaphone, CalendarClock, Bot, X, MoreVertical } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Megaphone,
+  CalendarClock,
+  Bot,
+  Users,
+  FileText,
+  X,
+  MoreVertical,
+} from 'lucide-react';
 import { ProfileDropdown } from './ProfileDropdown';
 
 const NAV_ITEMS = [
@@ -8,6 +17,8 @@ const NAV_ITEMS = [
   { path: '/broadcast', name: 'Broadcast', icon: Megaphone, label: 'Announcements' },
   { path: '/schedule', name: 'Schedule', icon: CalendarClock, label: 'OneDrive & timing' },
   { path: '/buddy', name: 'Buddy Control', icon: Bot, label: 'Exam-time control' },
+  { path: '/users', name: 'Manage Users', icon: Users, label: 'Add, edit & roles' },
+  { path: '/documents', name: 'Add Documents', icon: FileText, label: 'Documents & sharing' },
 ];
 
 export function Sidebar({ mobileNav, onCloseMobileNav, broadcastCount = 0, onSignOut }) {
@@ -38,14 +49,14 @@ export function Sidebar({ mobileNav, onCloseMobileNav, broadcastCount = 0, onSig
         aria-label="Main sidebar navigation"
       >
         <div className="brand">
-          <div className="tcs-logo" aria-label="TCS project demo">
-            TCS
+          <div className="tcs-logo" aria-label="Ignite Buddy Admin Console">
+            IB
           </div>
           <div className="brand-copy">
             <strong>
-              TCS<span> Admin</span>
+              Ignite<span> Buddy</span>
             </strong>
-            <small>PROJECT DEMO CONSOLE</small>
+            <small>ADMIN CONSOLE</small>
           </div>
           <button
             type="button"
@@ -59,10 +70,10 @@ export function Sidebar({ mobileNav, onCloseMobileNav, broadcastCount = 0, onSig
 
         <div className="workspace">
           <div className="workspace-icon tcs-workspace-mark" aria-hidden="true">
-            T
+            I
           </div>
           <div>
-            <b>TCS workspace</b>
+            <b>Ignite workspace</b>
             <small>Administrator account</small>
           </div>
           <span className="workspace-dot" aria-hidden="true" />
@@ -97,10 +108,10 @@ export function Sidebar({ mobileNav, onCloseMobileNav, broadcastCount = 0, onSig
         <div className="sidebar-bottom">
           <div className="system-status-widget">
             <div className="system-status-info">
-              <b>Connected: SQLite</b>
-              <small>Django REST API active</small>
+              <b>Frontend demo mode</b>
+              <small>Browser-local state only</small>
             </div>
-            <span className="status-indicator-dot" title="Database connected" aria-hidden="true" />
+            <span className="status-indicator-dot" title="Demo mode active" aria-hidden="true" />
           </div>
 
           <div style={{ position: 'relative' }}>

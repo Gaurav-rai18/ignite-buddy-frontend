@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="footer">
       <span>
-        <b className="footer-tcs">TCS</b> Admin console · Independent project demo
+        <b className="footer-tcs">Ignite Buddy</b> Admin console · Campus management console
       </span>
       <span>
         React <i aria-hidden="true" /> Django <i aria-hidden="true" /> SQLite

@@ -1,14 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '../hooks/useAuth';
+import { ProtectedRoute } from '../components/layout/ProtectedRoute';
 import { AppLayout } from '../components/layout/AppLayout';
+import { Login } from '../pages/Login/Login';
 import { Dashboard } from '../pages/Dashboard/Dashboard';
 import { Broadcast } from '../pages/Broadcast/Broadcast';
 import { Schedule } from '../pages/Schedule/Schedule';
 import { BuddyControl } from '../pages/BuddyControl/BuddyControl';
+import { ManageUsers } from '../pages/ManageUsers/ManageUsers';
+import { AddDocuments } from '../pages/AddDocuments/AddDocuments';
 import { NotFound } from '../pages/NotFound/NotFound';
 import { broadcastService } from '../services/broadcastService';
 
-export function App() {
+function PublicOnlyRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
+
+function AppRoutes() {
   const [toastMessage, setToastMessage] = useState('');
   const [broadcastCount, setBroadcastCount] = useState(0);
 
@@ -46,13 +60,24 @@ export function App() {
   return (
     <Routes>
       <Route
+        path="/login"
+        element={
+          <PublicOnlyRoute>
+            <Login onNotify={notify} />
+          </PublicOnlyRoute>
+        }
+      />
+
+      <Route
         path="/"
         element={
-          <AppLayout
-            broadcastCount={broadcastCount}
-            toastMessage={toastMessage}
-            onNotify={notify}
-          />
+          <ProtectedRoute>
+            <AppLayout
+              broadcastCount={broadcastCount}
+              toastMessage={toastMessage}
+              onNotify={notify}
+            />
+          </ProtectedRoute>
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
@@ -68,8 +93,18 @@ export function App() {
         />
         <Route path="schedule" element={<Schedule onNotify={notify} />} />
         <Route path="buddy" element={<BuddyControl onNotify={notify} />} />
+        <Route path="users" element={<ManageUsers onNotify={notify} />} />
+        <Route path="documents" element={<AddDocuments onNotify={notify} />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }

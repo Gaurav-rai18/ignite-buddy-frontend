@@ -39,7 +39,7 @@ export function ProfileDropdown({ isOpen, onClose, onSignOut }) {
         <div className="avatar" aria-hidden="true">AD</div>
         <div>
           <b>Administrator</b>
-          <small>admin@tcs.demo</small>
+          <small>admin@campus.demo</small>
         </div>
       </div>
 
