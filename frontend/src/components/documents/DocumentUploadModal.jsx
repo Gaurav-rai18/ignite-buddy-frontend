@@ -7,6 +7,7 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.txt'];
 
 export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
   const [file, setFile] = useState(null);
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [audience, setAudience] = useState('All students');
   const [error, setError] = useState('');
@@ -17,7 +18,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
 
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !uploading) {
         onClose();
       }
     }
@@ -25,11 +26,12 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, uploading]);
 
   useEffect(() => {
     if (isOpen) {
       setFile(null);
+      setName('');
       setDescription('');
       setAudience('All students');
       setError('');
@@ -47,7 +49,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
     const lowerName = candidateFile.name.toLowerCase();
     const isAllowedExt = ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
     if (!isAllowedExt) {
-      setError('Unsupported file type. Please upload a PDF or TXT file.');
+      setError('Please upload a PDF or text file.');
       return;
     }
 
@@ -62,6 +64,9 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
     }
 
     setFile(candidateFile);
+    if (!name) {
+      setName(candidateFile.name.replace(/\.[^/.]+$/, ''));
+    }
   };
 
   const handleDragOver = (e) => {
@@ -89,14 +94,23 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (uploading) return; // Prevent duplicate submission
+
     if (!file) {
       setError('Please select a file to upload.');
       return;
     }
 
     setUploading(true);
+    setError('');
+
     try {
-      await onUpload({ file, audience, description });
+      await onUpload({
+        file,
+        name: name.trim() || file.name.replace(/\.[^/.]+$/, ''),
+        audience,
+        description,
+      });
       onClose();
     } catch (err) {
       setError(err.message || 'Unable to upload this document. Please try again.');
@@ -111,7 +125,9 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-modal-title"
-      onClick={onClose}
+      onClick={() => {
+        if (!uploading) onClose();
+      }}
     >
       <div className="modal-card" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -127,6 +143,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
             type="button"
             className="modal-close"
             onClick={onClose}
+            disabled={uploading}
             aria-label="Close upload modal"
           >
             <X size={18} aria-hidden="true" />
@@ -201,7 +218,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
               <div className="file-preview-meta">
                 <b>{file.name}</b>
                 <small>
-                  {file.name.endsWith('.pdf') ? 'PDF' : 'TXT'} • {formatFileSize(file.size)}
+                  {file.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'TXT'} • {formatFileSize(file.size)}
                 </small>
               </div>
               <button
@@ -210,9 +227,22 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
                 onClick={() => setFile(null)}
                 style={{ padding: '6px 10px', fontSize: '10.5px' }}
                 aria-label="Remove selected file"
+                disabled={uploading}
               >
-                Remove
+                Change file
               </button>
+            </div>
+          )}
+
+          {file && (
+            <div className="field">
+              <span>Document title / Name</span>
+              <input
+                placeholder="e.g. Semester Timetable"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={uploading}
+              />
             </div>
           )}
 
@@ -222,12 +252,17 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
               placeholder="e.g. Updated timetable for all departments"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              disabled={uploading}
             />
           </div>
 
           <div className="field">
             <span>Target audience</span>
-            <select value={audience} onChange={(e) => setAudience(e.target.value)}>
+            <select
+              value={audience}
+              onChange={(e) => setAudience(e.target.value)}
+              disabled={uploading}
+            >
               <option value="All students">All students</option>
               <option value="First year">First year</option>
               <option value="Second year">Second year</option>
@@ -241,7 +276,12 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
               Text will be extracted & indexed for RAG
             </span>
             <div className="form-foot-actions">
-              <button type="button" className="secondary-button" onClick={onClose} disabled={uploading}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onClose}
+                disabled={uploading}
+              >
                 Cancel
               </button>
               <button
@@ -250,7 +290,7 @@ export function DocumentUploadModal({ isOpen, onClose, onUpload }) {
                 disabled={!file || uploading}
               >
                 <UploadCloud size={15} aria-hidden="true" />
-                {uploading ? 'Uploading & Processing...' : 'Upload & Process'}
+                {uploading ? 'Uploading & Processing...' : 'Upload document'}
               </button>
             </div>
           </div>

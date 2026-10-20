@@ -1,11 +1,12 @@
 import React from 'react';
-import { FileText, Users, Clock, ExternalLink, Info, Trash2, Eye } from 'lucide-react';
+import { FileText, Users, Clock, Trash2, Eye, FileSearch } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 
 export function DocumentList({
   documents = [],
   loading = false,
   onViewDetails,
+  onViewDocument,
   onDelete,
   onOpenUpload,
 }) {
@@ -80,13 +81,11 @@ export function DocumentList({
                 type="button"
                 className="secondary-button"
                 style={{ padding: '7px 12px', fontSize: '11px' }}
-                onClick={() => {
-                  window.open('#', '_blank');
-                }}
-                title="Preview document file"
+                onClick={() => onViewDocument(doc)}
+                title={`View ${doc.name}`}
               >
-                <ExternalLink size={13} aria-hidden="true" />
-                Open link
+                <FileSearch size={13} aria-hidden="true" />
+                View document
               </button>
 
               <button

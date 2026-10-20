@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Search, RotateCw, Sparkles, Filter } from 'lucide-react';
+import { FileText, Plus, Search, RotateCw, Sparkles } from 'lucide-react';
 import { useDocuments } from '../../hooks/useDocuments';
 import { DocumentList } from '../../components/documents/DocumentList';
 import { DocumentUploadModal } from '../../components/documents/DocumentUploadModal';
 import { DocumentDetailsModal } from '../../components/documents/DocumentDetailsModal';
+import { DocumentViewerModal } from '../../components/documents/DocumentViewerModal';
 import { DeleteDocumentDialog } from '../../components/documents/DeleteDocumentDialog';
 import { ErrorBanner } from '../../components/ui/ErrorBanner';
 
@@ -24,6 +25,7 @@ export function AddDocuments({ onNotify }) {
 
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedDocDetails, setSelectedDocDetails] = useState(null);
+  const [viewingDoc, setViewingDoc] = useState(null);
   const [deletingDoc, setDeletingDoc] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -142,6 +144,7 @@ export function AddDocuments({ onNotify }) {
           documents={filteredDocuments}
           loading={loading}
           onViewDetails={(doc) => setSelectedDocDetails(doc)}
+          onViewDocument={(doc) => setViewingDoc(doc)}
           onDelete={(doc) => setDeletingDoc(doc)}
           onOpenUpload={() => setIsUploadOpen(true)}
         />
@@ -167,6 +170,12 @@ export function AddDocuments({ onNotify }) {
         isOpen={Boolean(selectedDocDetails)}
         document={selectedDocDetails}
         onClose={() => setSelectedDocDetails(null)}
+      />
+
+      <DocumentViewerModal
+        isOpen={Boolean(viewingDoc)}
+        document={viewingDoc}
+        onClose={() => setViewingDoc(null)}
       />
 
       <DeleteDocumentDialog

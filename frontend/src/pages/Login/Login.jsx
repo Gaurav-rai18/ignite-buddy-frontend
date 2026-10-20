@@ -75,12 +75,6 @@ export function Login({ onNotify }) {
     }
   };
 
-  const handleMicrosoftSignIn = () => {
-    if (onNotify) {
-      onNotify('Microsoft SSO (Azure AD) is ready to be configured with campus tenant credentials.');
-    }
-  };
-
   return (
     <div className="login-page-wrapper">
       <div className="login-container">
@@ -295,35 +289,6 @@ export function Login({ onNotify }) {
                     Sign in <ArrowRight size={17} aria-hidden="true" />
                   </>
                 )}
-              </button>
-
-              {/* DIVIDER */}
-              <div className="login-divider" aria-hidden="true">
-                <span>OR</span>
-              </div>
-
-              {/* MICROSOFT SSO BUTTON */}
-              <button
-                type="button"
-                className="secondary-button microsoft-btn"
-                onClick={handleMicrosoftSignIn}
-                disabled={isLoading}
-              >
-                <svg
-                  className="ms-logo"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 21 21"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <rect x="1" y="1" width="9" height="9" fill="#F25022" />
-                  <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
-                  <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
-                  <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
-                </svg>
-                <span>Sign in with Microsoft</span>
               </button>
             </form>
 
