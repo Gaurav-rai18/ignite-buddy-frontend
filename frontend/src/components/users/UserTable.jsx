@@ -16,42 +16,34 @@ export function UserTable({ users = [], onEdit, onDelete }) {
         <thead>
           <tr>
             <th>USER</th>
-            <th>ROLE</th>
-            <th>DEPARTMENT</th>
+            <th>BATCH</th>
+            <th>SUB-BATCH</th>
             <th>STATUS</th>
             <th style={{ textAlign: 'right' }}>ACTIONS</th>
           </tr>
         </thead>
         <tbody>
           {users.map((user) => {
-            const isAdmin = user.role.toLowerCase() === 'admin';
-            const isActive = user.status.toLowerCase() === 'active';
+            const isActive = user.status?.toLowerCase() === 'active';
 
             return (
               <tr key={user.id}>
                 <td>
                   <div className="user-cell">
                     <div className="user-avatar-pill" aria-hidden="true">
-                      {user.initials}
+                      {user.username?.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="user-details">
-                      <b>{user.name}</b>
+                      <b>{user.username}</b>
                       <small>{user.email}</small>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span className={`role-badge ${isAdmin ? 'admin' : 'student'}`}>
-                    {isAdmin ? (
-                      <ShieldCheck size={13} aria-hidden="true" />
-                    ) : (
-                      <GraduationCap size={13} aria-hidden="true" />
-                    )}
-                    {user.role}
-                  </span>
+                  <span className="department-text">Batch {user.batch}</span>
                 </td>
                 <td>
-                  <span className="department-text">{user.department}</span>
+                  <span className="department-text">{user.subbatch?.toUpperCase()}</span>
                 </td>
                 <td>
                   <span className={`status-pill ${isActive ? 'active' : 'inactive'}`}>
@@ -65,8 +57,8 @@ export function UserTable({ users = [], onEdit, onDelete }) {
                       type="button"
                       className="icon-action-btn"
                       onClick={() => onEdit(user)}
-                      title={`Edit ${user.name}`}
-                      aria-label={`Edit ${user.name}`}
+                      title={`Edit ${user.username}`}
+                      aria-label={`Edit ${user.username}`}
                     >
                       <Edit2 size={15} aria-hidden="true" />
                     </button>
@@ -74,8 +66,8 @@ export function UserTable({ users = [], onEdit, onDelete }) {
                       type="button"
                       className="icon-action-btn danger"
                       onClick={() => onDelete(user)}
-                      title={`Delete ${user.name}`}
-                      aria-label={`Delete ${user.name}`}
+                      title={`Delete ${user.username}`}
+                      aria-label={`Delete ${user.username}`}
                     >
                       <Trash2 size={15} aria-hidden="true" />
                     </button>

@@ -16,6 +16,15 @@ export function BroadcastPreviewModal({ isOpen, onClose, form }) {
 
   if (!isOpen) return null;
 
+  const mode = form.recipientMode || 'All users';
+  const selectedUsers = Array.isArray(form.selectedUsers) ? form.selectedUsers : [];
+  const recipientSummary =
+    mode === 'By role'
+      ? form.role || 'Select a role'
+      : mode === 'Specific users'
+        ? `${selectedUsers.length} selected user${selectedUsers.length === 1 ? '' : 's'}`
+        : 'All users';
+
   return (
     <div
       className="modal-overlay"
@@ -46,12 +55,22 @@ export function BroadcastPreviewModal({ isOpen, onClose, form }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="count-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
               <Users size={12} aria-hidden="true" />
-              {form.audience || 'All students'}
+              {recipientSummary}
             </span>
             <small style={{ color: 'var(--color-text-secondary)', fontSize: '10px' }}>
               Preview as student
             </small>
           </div>
+
+          {mode === 'Specific users' && selectedUsers.length > 0 && (
+            <div className="recipient-chips">
+              {selectedUsers.map((user) => (
+                <span className="recipient-chip static" key={user.id}>
+                  {user.username}
+                </span>
+              ))}
+            </div>
+          )}
 
           <h4 style={{ margin: '0', fontSize: '15px', fontWeight: '800', color: 'var(--color-text-primary)' }}>
             {form.title.trim() || 'Untitled Announcement'}

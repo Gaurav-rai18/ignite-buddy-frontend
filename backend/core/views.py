@@ -1,9 +1,39 @@
 from django.utils import timezone
+from django.contrib.auth import authenticate
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from .models import Broadcast, ScheduledLink, SiteSetting
-from .serializers import BroadcastSerializer, ScheduledLinkSerializer
+from rest_framework.permissions import AllowAny
+from .models import Broadcast, ScheduledLink, SiteSetting, User
+from .serializers import BroadcastSerializer, ScheduledLinkSerializer, UserSerializer
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({'detail': 'Please provide both username and password.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = authenticate(username=username, password=password)
+    
+    if user is not None:
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'batch': user.batch,
+            'subbatch': user.subbatch,
+            'status': user.status,
+            'token': 'mock-server-token-' + str(user.id) # In real app, use JWT or Token
+        })
+    else:
+        return Response({'detail': 'Invalid username or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 class BroadcastViewSet(viewsets.ModelViewSet):
     queryset = Broadcast.objects.all()

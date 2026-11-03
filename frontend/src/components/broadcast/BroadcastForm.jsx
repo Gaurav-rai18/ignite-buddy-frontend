@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { Megaphone, Users, Send, Eye } from 'lucide-react';
+import { Megaphone, Users, Send, Eye, AlertTriangle, X } from 'lucide-react';
 import { Field } from '../ui/Field';
-import { AUDIENCE_OPTIONS, VALIDATION_LIMITS } from '../../constants';
+import {
+  VALIDATION_LIMITS,
+  RECIPIENT_MODES,
+  DEFAULT_RECIPIENT_MODE,
+  ROLE_OPTIONS,
+  SPECIFIC_RECIPIENTS_SUPPORTED,
+} from '../../constants';
 import { BroadcastPreviewModal } from './BroadcastPreviewModal';
+import { RecipientSelector } from './RecipientSelector';
 
 export function BroadcastForm({
   form,
@@ -10,15 +17,34 @@ export function BroadcastForm({
   isSubmitting = false,
   onChangeField,
   onSubmit,
+  onToggleRecipient,
+  onSetRecipients,
 }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const selectedUsers = Array.isArray(form.selectedUsers) ? form.selectedUsers : [];
+  const mode = form.recipientMode || DEFAULT_RECIPIENT_MODE;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit();
   };
 
-  const isFormIncomplete = !form.title.trim() || !form.message.trim();
+  const recipientReady =
+    mode === 'Specific users'
+      ? selectedUsers.length > 0 && SPECIFIC_RECIPIENTS_SUPPORTED
+      : mode === 'By role'
+        ? Boolean(form.role)
+        : true;
+
+  const isFormIncomplete = !form.title.trim() || !form.message.trim() || !recipientReady;
+
+  const recipientLabel =
+    mode === 'By role'
+      ? form.role || 'Select a role'
+      : mode === 'Specific users'
+        ? `${selectedUsers.length} user${selectedUsers.length === 1 ? '' : 's'}`
+        : 'All users';
 
   return (
     <section className="panel form-panel">
@@ -50,25 +76,101 @@ export function BroadcastForm({
           />
         </Field>
 
-        <Field
-          label="Audience"
-          htmlFor="broadcast-audience"
-          error={formErrors.audience}
-        >
-          <select
-            id="broadcast-audience"
-            value={form.audience}
-            onChange={(e) => onChangeField('audience', e.target.value)}
-            disabled={isSubmitting}
-            aria-invalid={Boolean(formErrors.audience)}
+        <div className="field">
+          <span>Recipients</span>
+          <div
+            className="recipient-mode-toggle"
+            role="group"
+            aria-label="Recipient targeting type"
           >
-            {AUDIENCE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
+            {RECIPIENT_MODES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`recipient-mode-btn ${mode === option ? 'active' : ''}`}
+                aria-pressed={mode === option}
+                onClick={() => onChangeField('recipientMode', option)}
+                disabled={isSubmitting}
+              >
+                {option}
+              </button>
             ))}
-          </select>
-        </Field>
+          </div>
+          {formErrors.recipients && (
+            <span className="field-error-text" role="alert">
+              {formErrors.recipients}
+            </span>
+          )}
+        </div>
+
+        {mode === 'By role' && (
+          <Field label="Select role" htmlFor="broadcast-role">
+            <select
+              id="broadcast-role"
+              value={form.role || ''}
+              onChange={(e) => onChangeField('role', e.target.value)}
+              disabled={isSubmitting}
+            >
+              <option value="">Choose a role...</option>
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+
+        {mode === 'Specific users' && (
+          <>
+            {!SPECIFIC_RECIPIENTS_SUPPORTED && (
+              <div className="notice-pending" role="note">
+                <AlertTriangle size={15} aria-hidden="true" />
+                <div>
+                  <strong>Requires backend support</strong>
+                  <p>
+                    The backend Broadcast API cannot store recipients yet, so this will not be
+                    delivered. You can still build the recipient list here; publishing stays
+                    disabled until the backend adds a recipients field.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <RecipientSelector
+              selectedUsers={selectedUsers}
+              onToggle={onToggleRecipient}
+              onSetRecipients={onSetRecipients}
+              disabled={isSubmitting}
+            />
+
+            {selectedUsers.length > 0 && (
+              <div className="recipient-selected-panel">
+                <div className="recipient-selected-head">
+                  <span>
+                    <Users size={13} aria-hidden="true" /> Send to {selectedUsers.length} user
+                    {selectedUsers.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div className="recipient-chips">
+                  {selectedUsers.map((user) => (
+                    <span className="recipient-chip" key={user.id}>
+                      {user.username}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${user.username}`}
+                        onClick={() => onToggleRecipient && onToggleRecipient(user)}
+                        disabled={isSubmitting}
+                      >
+                        <X size={12} aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         <Field
           label="Message"
@@ -90,7 +192,7 @@ export function BroadcastForm({
 
         <div className="form-foot">
           <span>
-            <Users size={14} aria-hidden="true" /> Visible to: <b>{form.audience}</b>
+            <Users size={14} aria-hidden="true" /> Send to: <b>{recipientLabel}</b>
           </span>
 
           <div className="form-foot-actions">
@@ -108,6 +210,11 @@ export function BroadcastForm({
               type="submit"
               className="primary-button"
               disabled={isSubmitting || isFormIncomplete}
+              title={
+                mode === 'Specific users' && !SPECIFIC_RECIPIENTS_SUPPORTED
+                  ? 'Specific-user delivery requires backend support'
+                  : undefined
+              }
             >
               <Send size={15} aria-hidden="true" />
               {isSubmitting ? 'Publishing...' : 'Publish broadcast'}

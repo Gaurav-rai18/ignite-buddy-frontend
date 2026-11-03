@@ -13,4 +13,8 @@ export const scheduleService = {
   createSchedule: async (scheduleData, options = {}) => {
     return apiClient.post('/schedules/', scheduleData, options);
   },
+  deleteSchedule: async (id, options = {}) => {
+    return apiClient.delete(`/schedules/${id}/`, options);
+  },
 };
+

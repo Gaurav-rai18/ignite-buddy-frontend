@@ -66,10 +66,10 @@ export function useUsers() {
     const q = searchQuery.toLowerCase().trim();
     return users.filter(
       (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q) ||
-        u.department.toLowerCase().includes(q)
+        (u.username || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.batch || '').toLowerCase().includes(q) ||
+        (u.subbatch || '').toLowerCase().includes(q)
     );
   }, [users, searchQuery]);
 

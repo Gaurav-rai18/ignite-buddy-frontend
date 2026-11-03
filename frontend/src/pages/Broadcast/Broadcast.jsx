@@ -14,6 +14,8 @@ export function Broadcast({ onNotify, onUpdateBroadcastCount }) {
     formErrors,
     form,
     updateFormField,
+    toggleRecipient,
+    setRecipients,
     submitBroadcast,
     refetch,
   } = useBroadcasts();
@@ -49,6 +51,8 @@ export function Broadcast({ onNotify, onUpdateBroadcastCount }) {
           formErrors={formErrors}
           isSubmitting={isSubmitting}
           onChangeField={updateFormField}
+          onToggleRecipient={toggleRecipient}
+          onSetRecipients={setRecipients}
           onSubmit={handleSubmit}
         />
         <BroadcastList

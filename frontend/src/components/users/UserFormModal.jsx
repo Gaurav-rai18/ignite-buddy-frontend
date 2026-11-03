@@ -6,10 +6,11 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
   const isEditing = Boolean(initialUser);
 
   const [form, setForm] = useState({
-    name: '',
+    username: '',
     email: '',
-    role: 'Student',
-    department: 'Information Technology',
+    batch: '51',
+    subbatch: 'a1',
+    password: '',
     status: 'Active',
   });
   const [errors, setErrors] = useState({});
@@ -18,18 +19,20 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
   useEffect(() => {
     if (initialUser) {
       setForm({
-        name: initialUser.name || '',
+        username: initialUser.username || '',
         email: initialUser.email || '',
-        role: initialUser.role || 'Student',
-        department: initialUser.department || 'Information Technology',
+        batch: initialUser.batch || '51',
+        subbatch: initialUser.subbatch || 'a1',
+        password: '', // Don't populate password on edit
         status: initialUser.status || 'Active',
       });
     } else {
       setForm({
-        name: '',
+        username: '',
         email: '',
-        role: 'Student',
-        department: 'Information Technology',
+        batch: '51',
+        subbatch: 'a1',
+        password: '',
         status: 'Active',
       });
     }
@@ -54,16 +57,16 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
     e.preventDefault();
     const newErrors = {};
 
-    if (!form.name.trim()) {
-      newErrors.name = 'Full name is required.';
+    if (!form.username.trim()) {
+      newErrors.username = 'Username is required.';
     }
     if (!form.email.trim()) {
       newErrors.email = 'Email address is required.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       newErrors.email = 'Please provide a valid email address.';
     }
-    if (!form.department.trim()) {
-      newErrors.department = 'Department is required.';
+    if (!isEditing && !form.password) {
+      newErrors.password = 'Password is required for new users.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -107,15 +110,15 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
         </div>
 
         <form onSubmit={handleSubmit} className="form-layout" noValidate>
-          <Field label="Full name" htmlFor="user-name" error={errors.name}>
+          <Field label="Username" htmlFor="user-username" error={errors.username}>
             <input
-              id="user-name"
+              id="user-username"
               required
-              placeholder="e.g. Rahul Sharma"
-              value={form.name}
+              placeholder="e.g. rahul_s"
+              value={form.username}
               onChange={(e) => {
-                setForm({ ...form, name: e.target.value });
-                if (errors.name) setErrors({ ...errors, name: '' });
+                setForm({ ...form, username: e.target.value });
+                if (errors.username) setErrors({ ...errors, username: '' });
               }}
               autoFocus
             />
@@ -136,15 +139,43 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
           </Field>
 
           <div className="date-time-grid">
-            <Field label="Role" htmlFor="user-role">
+            <Field label="Batch" htmlFor="user-batch">
               <select
-                id="user-role"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                id="user-batch"
+                value={form.batch}
+                onChange={(e) => setForm({ ...form, batch: e.target.value })}
               >
-                <option value="Student">Student</option>
-                <option value="Admin">Admin</option>
+                {['51', '50', '49', '46', '47'].map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
               </select>
+            </Field>
+
+            <Field label="Sub-batch" htmlFor="user-subbatch">
+              <select
+                id="user-subbatch"
+                value={form.subbatch}
+                onChange={(e) => setForm({ ...form, subbatch: e.target.value })}
+              >
+                {['a1', 'a2', 'a3', 'a4', 'b1', 'b2', 'b3', 'b4', 'c1', 'c2', 'c3', 'c4'].map(sb => (
+                  <option key={sb} value={sb}>{sb.toUpperCase()}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <div className="date-time-grid">
+            <Field label="Password" htmlFor="user-password" error={errors.password}>
+              <input
+                id="user-password"
+                type="password"
+                placeholder={isEditing ? "Leave blank to keep current" : "Enter password"}
+                value={form.password}
+                onChange={(e) => {
+                  setForm({ ...form, password: e.target.value });
+                  if (errors.password) setErrors({ ...errors, password: '' });
+                }}
+              />
             </Field>
 
             <Field label="Status" htmlFor="user-status">
@@ -158,19 +189,6 @@ export function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null })
               </select>
             </Field>
           </div>
-
-          <Field label="Department" htmlFor="user-department" error={errors.department}>
-            <input
-              id="user-department"
-              required
-              placeholder="e.g. Information Technology"
-              value={form.department}
-              onChange={(e) => {
-                setForm({ ...form, department: e.target.value });
-                if (errors.department) setErrors({ ...errors, department: '' });
-              }}
-            />
-          </Field>
 
           <div className="form-foot" style={{ marginTop: '8px' }}>
             <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>

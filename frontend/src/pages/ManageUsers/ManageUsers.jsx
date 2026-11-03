@@ -48,12 +48,12 @@ export function ManageUsers({ onNotify }) {
     if (editingUser) {
       await editUser(editingUser.id, formData);
       if (onNotify) {
-        onNotify(`User ${formData.name} updated successfully`);
+        onNotify(`User ${formData.username} updated successfully`);
       }
     } else {
       await addUser(formData);
       if (onNotify) {
-        onNotify(`User ${formData.name} added successfully`);
+        onNotify(`User ${formData.username} added successfully`);
       }
     }
   };
@@ -123,10 +123,10 @@ export function ManageUsers({ onNotify }) {
             <Search size={16} aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search users, email or role.."
+              placeholder="Search users, email, batch or sub-batch.."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search users by name, email, or role"
+              aria-label="Search users by username, email, batch, or sub-batch"
             />
           </div>
           <span className="search-count-badge">

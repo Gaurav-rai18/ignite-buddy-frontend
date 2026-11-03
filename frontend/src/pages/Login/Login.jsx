@@ -35,15 +35,11 @@ export function Login({ onNotify }) {
     const errors = {};
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      errors.email = 'Please enter your email.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      errors.email = 'Please enter a valid email address.';
+      errors.email = 'Please enter your username or email.';
     }
 
     if (!password) {
       errors.password = 'Please enter your password.';
-    } else if (password.length < 4) {
-      errors.password = 'Password must be at least 4 characters.';
     }
 
     setFieldErrors(errors);
@@ -178,16 +174,16 @@ export function Login({ onNotify }) {
             )}
 
             <form onSubmit={handleSubmit} noValidate>
-              {/* EMAIL FIELD */}
+              {/* EMAIL FIELD (Used as Username/Email) */}
               <div className="form-group">
-                <label htmlFor="login-email">Email</label>
+                <label htmlFor="login-email">Username or Email</label>
                 <div className={`input-with-icon ${fieldErrors.email ? 'has-error' : ''}`}>
                   <Mail size={18} className="field-icon" aria-hidden="true" />
                   <input
                     id="login-email"
-                    type="email"
+                    type="text"
                     name="email"
-                    autoComplete="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -195,7 +191,7 @@ export function Login({ onNotify }) {
                         setFieldErrors((prev) => ({ ...prev, email: '' }));
                       }
                     }}
-                    placeholder="admin@yourdomain.com"
+                    placeholder="Enter username or email"
                     disabled={isLoading}
                     aria-invalid={Boolean(fieldErrors.email)}
                     aria-describedby={fieldErrors.email ? 'email-error' : undefined}

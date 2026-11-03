@@ -10,7 +10,7 @@ export function HeroBanner({ upcomingCount = 0 }) {
       <div className="overview-support-copy">
         <div className="eyebrow" style={{ marginBottom: '4px' }}>
           <span className="eyebrow-line" aria-hidden="true" />
-          CAMPUS WORKSPACE OVERVIEW
+          IGNITE BUDDY OVERVIEW
         </div>
         <h3>Keep everyone on the same page</h3>
         <p>

@@ -9,6 +9,7 @@ const INITIAL_FORM = {
   onedrive_url: '',
   publish_date: '',
   publish_time: '',
+  content_data: { day: 'Monday', grid: {} },
 };
 
 export function useSchedules() {
@@ -93,6 +94,7 @@ export function useSchedules() {
       const payload = {
         title: form.title.trim(),
         onedrive_url: form.onedrive_url.trim(),
+        content_data: form.content_data ? JSON.stringify(form.content_data) : null,
         publish_at: isoDate,
       };
 
@@ -120,6 +122,22 @@ export function useSchedules() {
     }
   }, [form, isSubmitting, fetchSchedules]);
 
+  const deleteSchedule = useCallback(async (id, onSuccess) => {
+    try {
+      await scheduleService.deleteSchedule(id);
+      await fetchSchedules();
+      if (onSuccess) {
+        onSuccess('Schedule deleted successfully.');
+      }
+      return true;
+    } catch (err) {
+      if (isMountedRef.current) {
+        setError(formatErrorMessage(err));
+      }
+      return false;
+    }
+  }, [fetchSchedules]);
+
   return {
     schedules,
     loading,
@@ -130,6 +148,7 @@ export function useSchedules() {
     updateFormField,
     resetForm,
     submitSchedule,
+    deleteSchedule,
     refetch: fetchSchedules,
     clearError: () => setError(''),
   };
