@@ -163,3 +163,52 @@ Generates an optimized production bundle in `frontend/dist/`.
 | `GET`, `PATCH` | `/api/settings/buddy/` | Retrieve and update Buddy exam availability |
 
 *(User management and RAG document services are abstracted cleanly in `frontend/src/services/` with local persistence adapter patterns, ready for future backend endpoint integration).*
+
+## Setup on a New Laptop
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repo-url>
+   cd campus-admin-panel
+   ```
+
+2. **Install backend dependencies**:
+   ```powershell
+   cd backend
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Apply database migrations** (creates the SQLite DB):
+   ```powershell
+   python manage.py migrate
+   ```
+
+4. **(Optional) Load initial data** if the project provides fixtures:
+   ```powershell
+   python manage.py loaddata initial_data.json
+   ```
+
+5. **Start the Django backend**:
+   ```powershell
+   python manage.py runserver 127.0.0.1:8000
+   ```
+   The API will be available at `http://127.0.0.1:8000/api/`.
+
+6. **Install frontend dependencies and launch the dev server**:
+   ```powershell
+   cd ../frontend
+   npm install
+   npm run dev
+   ```
+   Open the URL printed by Vite (usually `http://localhost:5173`).
+
+### Default Login Credentials
+- **Email:** `admin@campus.demo`
+- **Password:** `admin123`
+
+You can add or modify users via the **Manage Users** page after logging in.
+
+### Environment Variables
+Local development does not require extra environment variables; the project uses the bundled SQLite database and default Django settings. For production deployments, adjust `backend/config/settings.py` (e.g., `SECRET_KEY`, database configuration, allowed hosts).
