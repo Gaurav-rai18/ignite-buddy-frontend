@@ -166,6 +166,27 @@ describe('Schedule Enhancements Tests', () => {
 
       expect(screen.getByRole('dialog', { name: /manage dynamic time slots/i })).toBeInTheDocument();
     });
+
+    it('does not render batch quick-selection chips (+ All A, + All) and renders individual sub-batches', () => {
+      render(
+        <ScheduleGridBuilder
+          value={{ day: 'Monday', grid: {} }}
+          onChange={vi.fn()}
+          disabled={false}
+          config={mockConfig}
+        />
+      );
+
+      // Verify no "+ All A" or "+ All" quick buttons exist
+      expect(screen.queryByRole('button', { name: /\+ all a/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /\+ all b/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /\+ all c/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^\+ all$/i })).not.toBeInTheDocument();
+
+      // Individual sub-batches should be rendered
+      expect(screen.getAllByRole('button', { name: /^a1$/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: /^a2$/i }).length).toBeGreaterThan(0);
+    });
   });
 
   describe('ExcelUpload Component', () => {

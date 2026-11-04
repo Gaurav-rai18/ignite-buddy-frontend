@@ -3321,9 +3321,11 @@ nav {
 
 .schedule-builder-table {
   width: 100%;
-  border-collapse: collapse;
-  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1180px;
   table-layout: fixed;
+  box-sizing: border-box;
 }
 
 /* Table Headers */
@@ -3332,13 +3334,20 @@ nav {
   text-align: left;
   border-bottom: 2px solid var(--color-border);
   border-right: 1px solid var(--color-border);
+  box-sizing: border-box;
+}
+
+.schedule-builder-table th.time-header-th,
+.schedule-builder-table td.time-cell {
+  width: 155px;
+  min-width: 155px;
+  max-width: 155px;
+  box-sizing: border-box;
 }
 
 .schedule-builder-table th.time-header-th {
-  width: 120px;
-  min-width: 120px;
   background: #E2E8F0;
-  border-right: 2px solid var(--color-border);
+  padding: 12px 14px;
 }
 
 .th-content {
@@ -3350,10 +3359,14 @@ nav {
   text-transform: uppercase;
   color: var(--color-text-primary);
   letter-spacing: 0.5px;
+  box-sizing: border-box;
 }
 
 .schedule-builder-table th.lab-header-th {
   background: #F8FAFC;
+  width: 145px;
+  min-width: 145px;
+  box-sizing: border-box;
 }
 
 .lab-header-inner {
@@ -3361,6 +3374,7 @@ nav {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .lab-name {
@@ -3379,6 +3393,7 @@ nav {
   background: var(--color-white);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 /* Sticky Time Column */
@@ -3388,31 +3403,45 @@ nav {
   left: 0;
   z-index: 10;
   border-right: 2px solid var(--color-border);
+  box-sizing: border-box;
 }
 
 .schedule-builder-table td.time-cell {
   background: #FAFAFA;
-  padding: 14px 12px;
+  padding: 16px 14px;
   border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
 }
 
 .time-cell-inner {
   display: flex;
   align-items: center;
-  gap: 7px;
+  justify-content: flex-start;
+  gap: 8px;
   color: var(--color-primary);
   font-weight: 700;
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 11.5px;
+  margin: 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .time-icon {
   flex-shrink: 0;
+  color: var(--color-primary);
 }
 
 .time-label {
-  white-space: nowrap;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+  min-width: 0;
+  flex: 1;
+  box-sizing: border-box;
 }
 
 /* Content Cells */
@@ -3422,6 +3451,9 @@ nav {
   border-right: 1px solid var(--color-border);
   vertical-align: top;
   padding: 10px;
+  width: 145px;
+  min-width: 145px;
+  box-sizing: border-box;
   transition: background 0.15s, box-shadow 0.15s;
 }
 
@@ -3483,60 +3515,40 @@ nav {
   background: #FFFFFF;
 }
 
-/* Batch Presets Bar */
-.batch-presets-bar {
+/* Cell Sub-batch Action Bar */
+.cell-subbatch-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
-  flex-wrap: wrap;
+  padding: 1px 0;
+  margin-bottom: 2px;
 }
 
-.batch-preset-btn {
-  border: 1px dashed var(--color-border);
-  background: #F8FAFC;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 9px;
+.selected-count-badge {
+  font-size: 9.5px;
   font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.clear-cell-btn {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  font-size: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.12s;
+  padding: 1px 4px;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
 }
 
-.batch-preset-btn.batch-a {
-  color: #014BAA;
-}
-.batch-preset-btn.batch-a:hover, .batch-preset-btn.batch-a.active {
-  background: #EBF3FC;
-  border-color: #014BAA;
-  border-style: solid;
-}
-
-.batch-preset-btn.batch-b {
-  color: #7C3AED;
-}
-.batch-preset-btn.batch-b:hover, .batch-preset-btn.batch-b.active {
-  background: #F3E8FF;
-  border-color: #7C3AED;
-  border-style: solid;
-}
-
-.batch-preset-btn.batch-c {
-  color: #0D9488;
-}
-.batch-preset-btn.batch-c:hover, .batch-preset-btn.batch-c.active {
-  background: #CCFBF1;
-  border-color: #0D9488;
-  border-style: solid;
-}
-
-.batch-preset-btn.clear {
-  color: var(--color-danger);
-  border-color: #FECDD3;
-  margin-left: auto;
-}
-.batch-preset-btn.clear:hover {
-  background: #FFE4E6;
-  border-style: solid;
+.clear-cell-btn:hover {
+  color: #DC2626;
+  background: #FEF2F2;
 }
 
 /* Sub-batch Selector Rows & Chips */
@@ -3829,34 +3841,17 @@ nav {
 .legend-item.batch-e .legend-dot { background: #D97706; }
 .legend-item.batch-custom .legend-dot { background: #4F46E5; }
 
-.batch-preset-btn.batch-d { color: #059669; border-color: rgba(5, 150, 105, 0.35); }
-.batch-preset-btn.batch-d.active { background: #059669; color: #fff; }
-.batch-preset-btn.batch-e { color: #D97706; border-color: rgba(217, 119, 6, 0.35); }
-.batch-preset-btn.batch-e.active { background: #D97706; color: #fff; }
-.batch-preset-btn.batch-custom { color: #4F46E5; border-color: rgba(79, 70, 229, 0.35); }
-.batch-preset-btn.batch-custom.active { background: #4F46E5; color: #fff; }
-
-.batch-preset-btn.select-all-btn {
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
-  font-weight: 600;
-}
-.batch-preset-btn.select-all-btn.active {
-  background: #334155;
-  color: #fff;
-  border-color: #334155;
-}
-
 .sb-chip.batch-d.active { background: #059669; border-color: #059669; color: #fff; }
 .sb-chip.batch-e.active { background: #D97706; border-color: #D97706; color: #fff; }
 .sb-chip.batch-custom.active { background: #4F46E5; border-color: #4F46E5; color: #fff; }
 
 /* Seven Location Table Column Sizing */
 .schedule-builder-table {
-  min-width: 1040px;
+  min-width: 1180px;
 }
 .schedule-builder-table th.lab-header-th {
-  min-width: 140px;
+  width: 145px;
+  min-width: 145px;
 }
 
 /* Excel Upload Interface */

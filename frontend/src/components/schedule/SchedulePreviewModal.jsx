@@ -172,11 +172,17 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule, config }) {
             >
               <table
                 className="schedule-builder-table schedule-preview-table"
-                style={{ width: '100%', borderCollapse: 'collapse', minWidth: '850px' }}
+                style={{ width: '100%', minWidth: '1180px' }}
               >
+                <colgroup>
+                  <col style={{ width: '155px', minWidth: '155px' }} />
+                  {locations.map((loc) => (
+                    <col key={loc} style={{ width: '145px', minWidth: '145px' }} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: '130px' }}>Time / Location</th>
+                    <th className="sticky-col time-header-th" style={{ width: '155px' }}>Time / Location</th>
                     {locations.map((loc) => (
                       <th key={loc}>{loc}</th>
                     ))}

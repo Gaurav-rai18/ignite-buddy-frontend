@@ -128,35 +128,6 @@ export function ScheduleGridBuilder({
     handleCellChange(time, location, 'subbatches', next);
   };
 
-  const toggleBatchGroup = (time, location, groupKey) => {
-    const groupItems = batchGroups[groupKey] || [];
-    const current = gridData[time]?.[location]?.subbatches || [];
-    const allSelected = groupItems.length > 0 && groupItems.every((item) => current.includes(item));
-
-    let next;
-    if (allSelected) {
-      // Unselect all in this group
-      next = current.filter((item) => !groupItems.includes(item));
-    } else {
-      // Add all missing in this group
-      const additions = groupItems.filter((item) => !current.includes(item));
-      next = [...current, ...additions];
-    }
-    handleCellChange(time, location, 'subbatches', next);
-  };
-
-  const toggleAllBatchesInCell = (time, location) => {
-    const current = gridData[time]?.[location]?.subbatches || [];
-    const allKnownSubbatches = Object.values(batchGroups).flat();
-    const allSelected = allKnownSubbatches.length > 0 && allKnownSubbatches.every((s) => current.includes(s));
-
-    if (allSelected) {
-      handleCellChange(time, location, 'subbatches', []);
-    } else {
-      handleCellChange(time, location, 'subbatches', allKnownSubbatches);
-    }
-  };
-
   const clearCellBatches = (time, location) => {
     handleCellChange(time, location, 'subbatches', []);
   };
@@ -271,7 +242,7 @@ export function ScheduleGridBuilder({
         <div className="builder-instructions">
           <Users size={14} className="helper-icon" aria-hidden="true" />
           <span>
-            Click <b>All A / B / C...</b> to assign batch groups, or click individual sub-batch chips. Seven locations available across 5 working days.
+            Select individual sub-batches (A1–C4...) for each scheduled lab slot across 5 working days.
           </span>
         </div>
         <div className="batch-legend">
@@ -289,6 +260,12 @@ export function ScheduleGridBuilder({
         ref={scrollRef}
       >
         <table className="schedule-builder-table">
+          <colgroup>
+            <col style={{ width: '155px', minWidth: '155px' }} />
+            {locations.map((loc) => (
+              <col key={loc} style={{ width: '145px', minWidth: '145px' }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               <th className="sticky-col time-header-th">
@@ -324,11 +301,6 @@ export function ScheduleGridBuilder({
                   const subbatches = cell.subbatches || [];
                   const hasContent = Boolean(cell.topic?.trim() || subbatches.length > 0);
 
-                  const allKnownSubbatches = Object.values(batchGroups).flat();
-                  const isAllCellSelected =
-                    allKnownSubbatches.length > 0 &&
-                    allKnownSubbatches.every((s) => subbatches.includes(s));
-
                   return (
                     <td key={loc} className={`content-cell ${hasContent ? 'has-content' : ''}`}>
                       <div className="cell-inner">
@@ -346,53 +318,25 @@ export function ScheduleGridBuilder({
                           />
                         </div>
 
-                        {/* Batch Quick-Actions (All A, All B, All C..., Select All, Clear) */}
-                        <div className="batch-presets-bar">
-                          {batchGroupKeys.map((groupKey) => {
-                            const groupSubs = batchGroups[groupKey] || [];
-                            const isGroupAll =
-                              groupSubs.length > 0 && groupSubs.every((s) => subbatches.includes(s));
-                            const chipClass = getBatchChipClass(groupKey);
-
-                            return (
-                              <button
-                                key={groupKey}
-                                type="button"
-                                className={`batch-preset-btn ${chipClass} ${isGroupAll ? 'active' : ''}`}
-                                onClick={() => toggleBatchGroup(time, loc, groupKey)}
-                                disabled={disabled}
-                                title={`Toggle all Batch ${groupKey} sub-batches`}
-                              >
-                                {isGroupAll ? `✓ All ${groupKey}` : `+ All ${groupKey}`}
-                              </button>
-                            );
-                          })}
-
-                          {/* Location Select All / Clear Quick Actions */}
-                          <button
-                            type="button"
-                            className={`batch-preset-btn select-all-btn ${isAllCellSelected ? 'active' : ''}`}
-                            onClick={() => toggleAllBatchesInCell(time, loc)}
-                            disabled={disabled}
-                            title="Assign or unassign all available batches for this location"
-                          >
-                            {isAllCellSelected ? '✓ All' : '+ All'}
-                          </button>
-
-                          {subbatches.length > 0 && (
+                        {/* Sub-batch Header with Selected Count & Clear action */}
+                        {subbatches.length > 0 && (
+                          <div className="cell-subbatch-bar">
+                            <span className="selected-count-badge">
+                              {subbatches.length} {subbatches.length === 1 ? 'batch' : 'batches'}
+                            </span>
                             <button
                               type="button"
-                              className="batch-preset-btn clear"
+                              className="clear-cell-btn"
                               onClick={() => clearCellBatches(time, loc)}
                               disabled={disabled}
-                              title="Clear all sub-batches for this cell"
+                              title="Clear selected sub-batches"
                             >
                               Clear
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
-                        {/* Sub-batch Chips Organized by Batch Groups */}
+                        {/* Individual Sub-batch Chips Organized by Batch Groups */}
                         <div className="subbatch-selector">
                           {batchGroupKeys.map((groupKey) => {
                             const groupSubs = batchGroups[groupKey] || [];
