@@ -1,3 +1,15 @@
+/**
+ * BatchManagerModal.jsx — Modal Dialog for Dynamic Batch & Sub-Batch CRUD.
+ *
+ * Allows administrators to:
+ *  - Create new batch groups (e.g. Batch D, Batch E) with auto-generated sub-batches.
+ *  - Add custom sub-batches (e.g. A5, B5, D1) under existing batch groups.
+ *  - Delete batches or individual sub-batches with safety confirmations.
+ *  - Prevents duplicate batch codes/names and sub-batch codes within the same batch.
+ *
+ * Persists immediately to Django SQLite database via `onAddBatch` / `onRemoveBatch` props.
+ */
+
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Users, Layers, AlertTriangle, Check } from 'lucide-react';
 
@@ -341,3 +353,4 @@ export function BatchManagerModal({ isOpen, onClose, config, onAddBatch, onRemov
     </div>
   );
 }
+

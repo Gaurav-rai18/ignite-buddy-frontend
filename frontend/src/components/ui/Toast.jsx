@@ -1,3 +1,8 @@
+/**
+ * @file Toast.jsx
+ * @description Floating toast notification component. Shows a brief success message
+ * that auto-dismisses after the timeout set in App.jsx (2.8s).
+ */
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 

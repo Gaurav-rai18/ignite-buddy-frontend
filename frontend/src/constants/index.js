@@ -1,3 +1,17 @@
+/**
+ * @file constants/index.js
+ * @description Application-wide constants for the Ignite Buddy admin panel.
+ *
+ * Centralizes configuration values used by both the schedule module
+ * and the broadcast module so they can be changed in one place.
+ *
+ * Categories:
+ *   - API_BASE_URL:           Backend API root (configurable via .env).
+ *   - Schedule defaults:      Locations, days, time slots, batch groups.
+ *   - Broadcast settings:     Recipient modes, role options, audiences.
+ *   - Validation limits:      Max lengths and file sizes.
+ *   - REQUEST_TIMEOUT_MS:     Global fetch timeout.
+ */
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
 // Schedule Defaults (Five-day working schedule & seven locations)

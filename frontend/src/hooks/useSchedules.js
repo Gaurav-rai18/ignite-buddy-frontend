@@ -1,3 +1,27 @@
+/**
+ * useSchedules.js — Central State Management Hook for the Schedule Feature.
+ *
+ * Responsibilities:
+ *  1. Initial data fetching:
+ *     - Fetches complete schedule configuration (locations, batches, time slots, weekdays)
+ *       via `scheduleService.getConfig()` on mount.
+ *     - Falls back to `FALLBACK_CONFIG` if backend is unreachable (offline resiliency).
+ *     - Fetches saved schedule records via `scheduleService.getSchedules()`.
+ *  2. Form State Management:
+ *     - Manages active tab ('grid' vs 'excel' vs 'link'), title, publish date/time.
+ *     - Tracks timetable grid data in `content_data.grid` (single-day) or `content_data.days_data` (multi-day Excel).
+ *  3. Dynamic Configuration Mutations:
+ *     - `addBatch`, `removeBatch`, `addSubBatch`, `removeSubBatch` (calls API + updates local config state).
+ *     - `addTimeSlot`, `editTimeSlot`, `removeTimeSlot` (calls API + updates local config state).
+ *  4. Excel Parsing & Upload:
+ *     - Coordinates `parseExcelFile()`, updating form state with structured preview data.
+ *  5. Publishing / Submission:
+ *     - Validates form with `validateScheduleForm()`.
+ *     - Packages payload as JSON (native grid) or FormData (Excel upload).
+ *     - Converts local date/time into ISO 8601 UTC string (`publish_at`).
+ *     - Refetches schedule list on success.
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { scheduleService } from '../services/scheduleService';
 import { validateScheduleForm } from '../utils/validation';

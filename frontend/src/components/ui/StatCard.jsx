@@ -1,3 +1,8 @@
+/**
+ * @file StatCard.jsx
+ * @description Reusable statistics card showing a label, numeric value, icon, and trend.
+ * Used in StatsGrid on the dashboard to display broadcast count, schedule count, etc.
+ */
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 

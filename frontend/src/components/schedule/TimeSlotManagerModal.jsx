@@ -1,3 +1,14 @@
+/**
+ * TimeSlotManagerModal.jsx — Modal Dialog for Dynamic Time-Slot Management.
+ *
+ * Allows administrators to:
+ *  - View all existing schedule periods in chronological order.
+ *  - Add custom periods (e.g. 4:30 PM – 6:00 PM).
+ *  - Edit existing time slots.
+ *  - Delete unused time slots.
+ *  - Client-side validation prevents overlapping time ranges (via `validateTimeSlot`).
+ */
+
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, Clock, AlertTriangle, Check, ArrowDownUp } from 'lucide-react';
 import { validateTimeSlot } from '../../utils/validation';
@@ -261,3 +272,4 @@ export function TimeSlotManagerModal({ isOpen, onClose, config, onAddTimeSlot, o
     </div>
   );
 }
+

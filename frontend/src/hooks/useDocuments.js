@@ -1,3 +1,20 @@
+/**
+ * @file useDocuments.js
+ * @description Custom hook for document (knowledge-base) management.
+ *
+ * Manages the full document lifecycle: fetching, uploading, deleting, searching,
+ * and filtering by status. Uses localStorage-backed documentsService (not Django API).
+ *
+ * Key behaviors:
+ *   - Auto-polls every 1.5s when any document is in 'Processing' status,
+ *     to pick up the simulated Processing → Ready transition.
+ *   - Provides filteredDocuments via useMemo for search + status filtering.
+ *
+ * Data flow:
+ *   AddDocuments page → useDocuments() → documentsService → localStorage
+ *
+ * @exports {Function} useDocuments - Hook returning documents, filters, and CRUD actions.
+ */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { documentsService } from '../services/documentsService';
 

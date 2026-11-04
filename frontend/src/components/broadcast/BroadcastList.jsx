@@ -1,8 +1,26 @@
+/**
+ * @file BroadcastList.jsx
+ * @description Displays the history of saved broadcast announcements in a scrollable list.
+ *              Shows a loading placeholder while data is being fetched, an empty-state CTA
+ *              when no broadcasts exist, or a list of broadcast cards with title, message,
+ *              audience, and creation date.
+ *
+ * Data flow: Receives the `broadcasts` array from the parent Broadcast page, which fetches
+ *            it from the Django REST API via `broadcastService.getBroadcasts()`.
+ */
 import React from 'react';
 import { Megaphone, Users, Send } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { formatDate } from '../../utils/date';
 
+/**
+ * Renders the announcement history panel.
+ *
+ * @param {Object}   props
+ * @param {Array}    props.broadcasts   - Array of broadcast objects from the API.
+ * @param {boolean}  props.loading      - Whether the parent is still fetching data.
+ * @param {Function} [props.onCreateClick] - Callback to open the create-broadcast form; drives the empty-state CTA.
+ */
 export function BroadcastList({ broadcasts = [], loading = false, onCreateClick }) {
   return (
     <section className="panel list-panel">
@@ -16,6 +34,7 @@ export function BroadcastList({ broadcasts = [], loading = false, onCreateClick 
         </span>
       </div>
 
+      {/* Three-state rendering: loading spinner → broadcast cards → empty state */}
       {loading && broadcasts.length === 0 ? (
         <div style={{ padding: '36px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '11.5px' }}>
           Loading announcements...

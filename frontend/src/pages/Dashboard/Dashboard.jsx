@@ -1,3 +1,8 @@
+/**
+ * @file Dashboard.jsx
+ * @description Main dashboard page displaying summary statistics, recent broadcasts,
+ * buddy toggle, quick actions, and a hero banner. Fetches data via useDashboard hook.
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RotateCw } from 'lucide-react';

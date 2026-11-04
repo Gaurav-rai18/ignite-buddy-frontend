@@ -1,3 +1,8 @@
+/**
+ * @file DocumentList.jsx
+ * @description Lists uploaded knowledge-base documents with status indicators (Ready/Processing),
+ * chunk stats, and interactive view/delete actions.
+ */
 import React from 'react';
 import { FileText, Users, Clock, Trash2, Eye, FileSearch } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';

@@ -1,9 +1,21 @@
+"""
+core/tests.py — Automated Backend Test Suite for Schedule Enhancements.
+
+Tests cover:
+  1. Schedule config endpoint returning 7 locations & excluding Sat/Sun.
+  2. Dynamic batch and sub-batch creation, uniqueness checks, and cascading.
+  3. Dynamic time-slot creation and validation.
+  4. Explicit rejection of non-working days (Saturday/Sunday).
+  5. Excel template generation and round-trip parsing verification.
+"""
+
 import io
 from django.test import TestCase, Client
 from .models import ScheduleLocation, ScheduleBatch, ScheduleSubBatch, ScheduleTimeSlot, ScheduleWeekDay, ScheduledLink
 from .excel_utils import generate_schedule_template, parse_schedule_excel
 
 class ScheduleEnhancementsBackendTests(TestCase):
+    """Integration and unit tests for timetable schedule APIs and logic."""
     def setUp(self):
         self.client = Client()
 
@@ -70,3 +82,4 @@ class ScheduleEnhancementsBackendTests(TestCase):
         self.assertTrue(parsed['success'])
         self.assertTrue(parsed['total_rows_parsed'] > 0)
         self.assertIn('Monday', parsed['days_found'])
+

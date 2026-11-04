@@ -1,3 +1,19 @@
+/**
+ * @file validation.js
+ * @description Client-side validation utilities for forms across the app.
+ *
+ * Provides pure validation functions (no side effects) that return
+ * { isValid, errors } objects. Used by hooks (useBroadcasts, useSchedules)
+ * before submitting data to the backend.
+ *
+ * Validators:
+ *   - isValidHttpsUrl        — Ensures URLs use HTTPS protocol.
+ *   - validateBroadcastForm  — Title, message, recipient mode validation.
+ *   - validateScheduleForm   — Title, content, publish date/time validation.
+ *   - timeStringToMinutes    — Parses "9:00 AM" → minutes since midnight.
+ *   - validateTimeSlot       — Checks start/end time and overlap detection.
+ *   - validateBuddyState     — Simple boolean type check.
+ */
 import {
   ROLE_OPTIONS,
   RECIPIENT_MODES,

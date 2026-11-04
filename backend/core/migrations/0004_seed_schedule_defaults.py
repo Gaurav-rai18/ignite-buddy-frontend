@@ -62,3 +62,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(seed_defaults, migrations.RunPython.noop),
     ]
+

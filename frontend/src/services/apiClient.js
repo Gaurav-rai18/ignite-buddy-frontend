@@ -1,3 +1,15 @@
+/**
+ * apiClient.js — Centralized HTTP Client Wrapper.
+ *
+ * Responsibilities:
+ *  - Wraps native `fetch` with automatic JSON serialization and deserialization.
+ *  - Injects stored authentication tokens (e.g. from localStorage/sessionStorage)
+ *    into request headers.
+ *  - Handles FormData requests (for file uploads) without overriding `Content-Type`.
+ *  - Standardizes error responses into an `ApiError` class with status codes and friendly messages.
+ *  - Implements request timeout handling via AbortController.
+ */
+
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '../constants';
 
 export class ApiError extends Error {

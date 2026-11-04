@@ -1,3 +1,18 @@
+/**
+ * ScheduleForm.jsx — Timetable Creation Form with Mode Switcher & Publish Controls.
+ *
+ * Provides:
+ *  - Mode switcher tab bar:
+ *      • 'grid'  -> Native Timetable Grid (interactive table with dynamic batch chips)
+ *      • 'excel' -> Excel File Upload (drag-and-drop .xlsx parser with preview)
+ *      • 'link'  -> Legacy OneDrive URL sharing
+ *  - Common metadata: Schedule Title (max 160 chars)
+ *  - Unified Timetable Preview component (displays all configured slots for both grid & Excel)
+ *  - Publishing Schedule settings: date picker (min = today), time picker,
+ *    and quick shortcuts (Today, Tomorrow, Next Week).
+ *  - Submits via JSON (grid) or multipart FormData (Excel) to Django backend.
+ */
+
 import React, { useState } from 'react';
 import {
   CalendarClock,
@@ -13,6 +28,7 @@ import { Field } from '../ui/Field';
 import { VALIDATION_LIMITS } from '../../constants';
 import { ScheduleGridBuilder } from './ScheduleGridBuilder';
 import { ExcelUpload } from './ExcelUpload';
+import { UnifiedTimetablePreview } from './UnifiedTimetablePreview';
 
 export function ScheduleForm({
   form,
@@ -257,6 +273,13 @@ export function ScheduleForm({
             />
           </div>
         )}
+
+        {/* Unified Timetable Preview (shows all schedule data for both Native Grid & Excel Upload) */}
+        <UnifiedTimetablePreview
+          contentData={form.content_data}
+          config={config}
+          title={form.title}
+        />
 
         {/* Publish Date & Time Settings */}
         <div className="publish-settings-card">

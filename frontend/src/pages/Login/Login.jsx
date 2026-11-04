@@ -1,3 +1,9 @@
+/**
+ * @file Login.jsx
+ * @description Login page with email/password authentication.
+ * Calls useAuth().login() which delegates to authService → Django /api/login/.
+ * Shows validation errors inline and redirects to /dashboard on success.
+ */
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {

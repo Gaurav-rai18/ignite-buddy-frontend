@@ -1,10 +1,35 @@
+/**
+ * @file NotificationsDropdown.jsx
+ * @description Dropdown panel that displays system notifications and recent broadcast
+ *              alerts in the Topbar.
+ *
+ * Behaviour:
+ *  - Shows a static "System operational" notification plus up to two recent broadcasts.
+ *  - "Mark all as read" sets a local `cleared` flag so the list appears empty.
+ *  - Closes on outside click (mousedown) or Escape key press.
+ *  - Returns `null` when `isOpen` is false to keep the DOM clean.
+ *
+ * Data flow:
+ *  Topbar ➜ isOpen, onClose, broadcasts[]
+ *
+ * @exports NotificationsDropdown
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell, CheckCircle2, Megaphone, CalendarClock, Bot } from 'lucide-react';
 
+/**
+ * Notifications flyout panel.
+ * @param {Object}   props
+ * @param {boolean}  props.isOpen      - Whether the dropdown is visible.
+ * @param {Function} props.onClose     - Called to close the dropdown.
+ * @param {Array}    props.broadcasts  - Array of broadcast objects from the API.
+ */
 export function NotificationsDropdown({ isOpen, onClose, broadcasts = [] }) {
   const dropdownRef = useRef(null);
+  /** When true, all notifications are hidden (local "read" state — not persisted) */
   const [cleared, setCleared] = useState(false);
 
+  /* ── Close-on-outside-click & Escape key handler ─────────────────────── */
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -29,6 +54,12 @@ export function NotificationsDropdown({ isOpen, onClose, broadcasts = [] }) {
 
   if (!isOpen) return null;
 
+  /*
+   * Build the notification list:
+   * - If the user has cleared them, show an empty array.
+   * - Otherwise, include a fixed "system online" item plus the first two broadcasts
+   *   (to keep the dropdown compact).
+   */
   const notifications = cleared
     ? []
     : [

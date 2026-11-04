@@ -1,3 +1,8 @@
+/**
+ * @file DeleteScheduleDialog.jsx
+ * @description Confirmation modal for deleting a schedule entry.
+ * Shows the schedule title and warns about irreversibility. Calls onConfirm on delete.
+ */
 import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 

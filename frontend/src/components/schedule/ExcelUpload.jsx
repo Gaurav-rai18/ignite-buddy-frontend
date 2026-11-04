@@ -1,3 +1,16 @@
+/**
+ * ExcelUpload.jsx — Spreadsheet Upload, Validation & Parsing UI.
+ *
+ * Responsibilities:
+ *  - Drag-and-drop zone supporting `.xlsx` and `.xls` files (up to 15MB).
+ *  - Official Excel Template download banner linked to `/api/schedule-template/`.
+ *  - Calls `scheduleService.parseExcel(file)` upon drop/selection to extract
+ *    slots across all 7 locations and Monday-Friday working days.
+ *  - File summary card showing filename, formatted file size, and 'Verified & Ready' badge.
+ *  - File replace and remove actions.
+ *  - Surfaces validation warnings (e.g. non-working day warnings).
+ */
+
 import React, { useState, useRef } from 'react';
 import {
   UploadCloud,
@@ -7,9 +20,6 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  Eye,
-  Clock,
-  BookOpen,
 } from 'lucide-react';
 import { scheduleService } from '../../services/scheduleService';
 
@@ -26,7 +36,6 @@ export function ExcelUpload({
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
-  const [previewDay, setPreviewDay] = useState('');
   const fileInputRef = useRef(null);
 
   const formatFileSize = (bytes) => {
@@ -68,7 +77,7 @@ export function ExcelUpload({
     setUploadError('');
     setUploadSuccess('');
 
-    // Validate extension
+    // Validate extension (.xlsx, .xls)
     const name = selectedFile.name.toLowerCase();
     if (!name.endsWith('.xlsx') && !name.endsWith('.xls')) {
       setUploadError('Invalid file format. Please upload a valid Microsoft Excel file (.xlsx or .xls).');
@@ -80,9 +89,8 @@ export function ExcelUpload({
       const result = await scheduleService.parseExcel(selectedFile);
       if (result && result.success) {
         setUploadSuccess(
-          `Timetable parsed successfully! Extracted ${result.total_rows_parsed || 0} slots across ${result.days_found?.length || 1} day(s).`
+          `Excel verified successfully! Extracted ${result.total_rows_parsed || 0} slots across ${result.days_found?.length || 1} day(s).`
         );
-        setPreviewDay(result.selected_day || 'Monday');
         onFileSelect({
           file: selectedFile,
           fileName: selectedFile.name,
@@ -111,12 +119,6 @@ export function ExcelUpload({
     document.body.removeChild(link);
   };
 
-  // Days found in parsed data
-  const daysFound = parsedData?.days_found || (parsedData?.days_data ? Object.keys(parsedData.days_data) : []);
-  const activeDay = previewDay || (daysFound.length > 0 ? daysFound[0] : 'Monday');
-  const activeDayGrid = parsedData?.days_data?.[activeDay] || parsedData?.grid || {};
-  const activeDayTimeSlots = Object.keys(activeDayGrid);
-
   return (
     <div className="excel-upload-container">
       {/* Template Download Banner */}
@@ -124,7 +126,7 @@ export function ExcelUpload({
         <div className="banner-left">
           <FileSpreadsheet size={16} className="text-primary" aria-hidden="true" />
           <span>
-            <b>Standardized Excel Template:</b> Download the official timetable spreadsheet formatted with Lab 1–4, Work Area, TR1, TR2 &amp; dynamic batches.
+            <b>Standardized Excel Template:</b> Download the official timetable spreadsheet formatted with all 7 locations &amp; dynamic batches.
           </span>
         </div>
         <button
@@ -249,111 +251,6 @@ export function ExcelUpload({
         <div className="upload-alert success">
           <CheckCircle2 size={15} aria-hidden="true" style={{ flexShrink: 0 }} />
           <span>{uploadSuccess}</span>
-        </div>
-      )}
-
-      {/* Parsed Timetable Interactive Preview */}
-      {parsedData && (
-        <div className="excel-preview-section">
-          <div className="preview-heading-row">
-            <div className="heading-left">
-              <Eye size={15} className="text-primary" aria-hidden="true" />
-              <span>
-                <b>Timetable Preview</b> &bull; Verify parsed slots before publishing
-              </span>
-            </div>
-
-            {/* Day Switcher if multiple days found */}
-            {daysFound.length > 1 && (
-              <div className="preview-day-tabs">
-                {daysFound.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    className={`preview-day-pill ${d === activeDay ? 'active' : ''}`}
-                    onClick={() => setPreviewDay(d)}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {activeDayTimeSlots.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-              No slots scheduled for {activeDay}.
-            </div>
-          ) : (
-            <div className="excel-preview-table-wrapper" style={{ overflowX: 'auto' }}>
-              <table className="schedule-builder-table excel-preview-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '130px' }}>Time Slot</th>
-                    <th>Lab / Location</th>
-                    <th>Topic / Subject</th>
-                    <th>Assigned Batches</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDayTimeSlots.map((time) => {
-                    const locationsInSlot = activeDayGrid[time] || {};
-                    const locKeys = Object.keys(locationsInSlot);
-
-                    return locKeys.map((loc, lIdx) => {
-                      const cell = locationsInSlot[loc];
-                      const subbatches = cell?.subbatches || [];
-
-                      return (
-                        <tr key={`${time}-${loc}`}>
-                          {lIdx === 0 && (
-                            <td className="time-cell" rowSpan={locKeys.length} style={{ verticalAlign: 'top' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <Clock size={12} aria-hidden="true" />
-                                <span>{time}</span>
-                              </div>
-                            </td>
-                          )}
-                          <td style={{ fontWeight: '700', fontSize: '12px', color: '#014BAA' }}>{loc}</td>
-                          <td style={{ fontSize: '12px' }}>
-                            {cell?.topic ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <BookOpen size={12} color="var(--color-primary)" />
-                                <span>{cell.topic}</span>
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
-                                (No topic)
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            {subbatches.length > 0 ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                                {subbatches.map((sb) => (
-                                  <span
-                                    key={sb}
-                                    className="sb-chip active batch-a"
-                                    style={{ fontSize: '9px', padding: '2px 5px', pointerEvents: 'none' }}
-                                  >
-                                    {sb.toUpperCase()}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                All trainees
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
     </div>

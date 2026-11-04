@@ -1,8 +1,27 @@
+/**
+ * @file StatsGrid.jsx
+ * @description Dashboard statistics grid that shows four KPI cards: total broadcasts,
+ *              scheduled links, Buddy control toggle, and system status. Uses the
+ *              reusable `StatCard` component for the first two metrics and renders
+ *              custom inline cards for the Buddy toggle and the system health indicator.
+ *
+ * Data flow: Receives `summary` (from `GET /api/summary/`), `buddy` state, and
+ *            the `onToggleBuddy` callback from the Dashboard page.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Megaphone, CalendarClock, Bot, Database, ArrowUpRight } from 'lucide-react';
 import { StatCard } from '../ui/StatCard';
 
+/**
+ * Renders the four-column statistics grid on the Dashboard.
+ *
+ * @param {Object}   props
+ * @param {Object}   props.summary          - API summary with `broadcast_count` and `scheduled_count`.
+ * @param {boolean}  props.buddy            - Whether the Buddy chatbot is currently enabled.
+ * @param {Function} props.onToggleBuddy    - Callback to toggle the Buddy state.
+ * @param {boolean}  props.isTogglingBuddy  - True while the toggle API call is pending.
+ */
 export function StatsGrid({ summary, buddy, onToggleBuddy, isTogglingBuddy }) {
   const navigate = useNavigate();
 

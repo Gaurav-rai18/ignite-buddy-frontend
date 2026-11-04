@@ -1,3 +1,8 @@
+/**
+ * @file DeleteUserDialog.jsx
+ * @description Confirmation dialog modal when an administrator deletes a user.
+ * Displays user identity details and triggers confirmation callback.
+ */
 import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 

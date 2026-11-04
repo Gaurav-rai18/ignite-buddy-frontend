@@ -1,3 +1,16 @@
+/**
+ * @file useUsers.js
+ * @description Custom hook for user management (CRUD + search).
+ *
+ * Fetches the full user list on mount, provides addUser/editUser/deleteUser
+ * actions that optimistically update local state after API success, and
+ * exposes a filteredUsers list via useMemo for client-side search.
+ *
+ * Data flow:
+ *   ManageUsers page → useUsers() → usersService → apiClient → Django /api/users/
+ *
+ * @exports {Function} useUsers - Hook returning users, search, and CRUD actions.
+ */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { usersService } from '../services/usersService';
 

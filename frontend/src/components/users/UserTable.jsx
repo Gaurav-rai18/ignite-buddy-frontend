@@ -1,3 +1,8 @@
+/**
+ * @file UserTable.jsx
+ * @description Renders a table of registered users with role badges, cohort details,
+ * and quick action triggers (edit and delete).
+ */
 import React from 'react';
 import { GraduationCap, ShieldCheck, Edit2, Trash2 } from 'lucide-react';
 

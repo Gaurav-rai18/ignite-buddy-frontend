@@ -1,3 +1,9 @@
+/**
+ * @file EmptyState.jsx
+ * @description Reusable empty-state placeholder shown when a list has no items.
+ * Displays an icon, title, subtitle, and optional action button.
+ * @param {Object} props - { icon, title, subtitle, actionLabel, onAction }
+ */
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 

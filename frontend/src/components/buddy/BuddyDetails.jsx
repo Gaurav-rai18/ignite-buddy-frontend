@@ -1,6 +1,24 @@
+/**
+ * @file BuddyDetails.jsx
+ * @description Shows the current Buddy chatbot configuration state and provides
+ *              a toggle switch to enable/disable it. The component also displays
+ *              an info note explaining how this setting connects to the
+ *              `/api/settings/buddy/` endpoint used by student-facing apps.
+ *
+ * Data flow: Receives the `buddy` boolean and `isUpdating` flag from the parent
+ *            Buddy page, which manages the API call to toggle the setting.
+ */
 import React from 'react';
 import { Bot, Info } from 'lucide-react';
 
+/**
+ * Panel displaying the Buddy chatbot's current configuration and toggle control.
+ *
+ * @param {Object}   props
+ * @param {boolean}  props.buddy         - Current Buddy enabled/disabled state from the DB.
+ * @param {boolean}  props.isUpdating    - True while the toggle API call is in-flight.
+ * @param {Function} props.onToggleBuddy - Callback to flip the Buddy state via the API.
+ */
 export function BuddyDetails({ buddy, isUpdating, onToggleBuddy }) {
   return (
     <section className="panel control-info">

@@ -1,3 +1,8 @@
+/**
+ * @file DocumentViewerModal.jsx
+ * @description Modal providing an inline viewer or native preview for uploaded documents.
+ * Renders document text content or opens object URLs for PDF viewing.
+ */
 import React, { useEffect } from 'react';
 import { FileText, ExternalLink, X, Copy, Check, Sparkles } from 'lucide-react';
 import { documentsService } from '../../services/documentsService';

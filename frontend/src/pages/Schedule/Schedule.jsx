@@ -1,9 +1,17 @@
+/**
+ * Schedule.jsx — Top-Level Schedule Management Page.
+ *
+ * Features:
+ *  - Integrates `useSchedules()` hook to manage all timetable CRUD operations,
+ *    dynamic locations, batch configuration, and Excel upload workflows.
+ *  - Provides page intro banner and error messaging.
+ *  - Renders full-width `ScheduleForm` for creating and publishing academic timetables.
+ */
+
 import React, { useState } from 'react';
-import { CalendarClock, Grid3X3, FileSpreadsheet, ListOrdered, CalendarCheck, Link2 } from 'lucide-react';
 import { PageIntro } from '../../components/ui/PageIntro';
 import { ErrorBanner } from '../../components/ui/ErrorBanner';
 import { ScheduleForm } from '../../components/schedule/ScheduleForm';
-import { ScheduleList } from '../../components/schedule/ScheduleList';
 import { useSchedules } from '../../hooks/useSchedules';
 
 export function Schedule({ onNotify }) {
@@ -19,7 +27,6 @@ export function Schedule({ onNotify }) {
     updateFormField,
     resetForm,
     submitSchedule,
-    deleteSchedule,
     refetch,
     addBatch,
     removeBatch,
@@ -46,29 +53,6 @@ export function Schedule({ onNotify }) {
     });
   };
 
-  const handleDeleteSchedule = async (id) => {
-    if (!deleteSchedule) return false;
-    return deleteSchedule(id, (msg) => {
-      if (onNotify) {
-        onNotify(msg);
-      }
-    });
-  };
-
-  const handleFocusTitle = () => {
-    const el = document.getElementById('schedule-title');
-    if (el) {
-      el.focus();
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
-  // Quick stats
-  const totalSchedules = schedules.length;
-  const excelSchedules = schedules.filter((s) => s.schedule_type === 'excel' || Boolean(s.excel_file || s.file_name)).length;
-  const gridSchedules = schedules.filter((s) => Boolean(s.content_data) && s.schedule_type !== 'excel' && !s.excel_file).length;
-  const otherSchedules = totalSchedules - excelSchedules - gridSchedules;
-
   return (
     <div className="schedule-page-container">
       {/* Intro Header */}
@@ -78,45 +62,12 @@ export function Schedule({ onNotify }) {
           title="Schedule Planner"
           subtitle="Build dynamic 7-location lab timetable grids, manage batches & time slots, or upload Excel spreadsheets."
         />
-
-        {/* Quick Header Stats */}
-        <div className="schedule-header-stats">
-          <div className="header-stat-pill" title="Total active scheduled items">
-            <CalendarCheck size={14} className="text-primary" aria-hidden="true" />
-            <span>
-              <b>{totalSchedules}</b> scheduled
-            </span>
-          </div>
-
-          <div className="header-stat-pill" title="Native interactive timetables">
-            <Grid3X3 size={14} color="#014BAA" aria-hidden="true" />
-            <span>
-              <b>{gridSchedules}</b> {gridSchedules === 1 ? 'timetable' : 'timetables'}
-            </span>
-          </div>
-
-          <div className="header-stat-pill" title="Excel spreadsheet timetables">
-            <FileSpreadsheet size={14} color="#059669" aria-hidden="true" />
-            <span>
-              <b>{excelSchedules}</b> {excelSchedules === 1 ? 'Excel sheet' : 'Excel sheets'}
-            </span>
-          </div>
-
-          {otherSchedules > 0 && (
-            <div className="header-stat-pill" title="External link resources">
-              <Link2 size={14} color="#0284C7" aria-hidden="true" />
-              <span>
-                <b>{otherSchedules}</b> {otherSchedules === 1 ? 'link' : 'links'}
-              </span>
-            </div>
-          )}
-        </div>
       </div>
 
       {error && <ErrorBanner message={error} onRetry={refetch} />}
 
-      {/* Main Layout Container */}
-      <div className={activeTab === 'grid' ? 'schedule-grid-layout' : 'two-column schedule-link-layout'}>
+      {/* Main Full-Width Schedule Creation Area */}
+      <div className="schedule-full-layout">
         <ScheduleForm
           form={form}
           formErrors={formErrors}
@@ -134,14 +85,6 @@ export function Schedule({ onNotify }) {
           onAddTimeSlot={addTimeSlot}
           onEditTimeSlot={editTimeSlot}
           onRemoveTimeSlot={removeTimeSlot}
-        />
-
-        <ScheduleList
-          schedules={schedules}
-          loading={loading}
-          onCreateClick={handleFocusTitle}
-          onDeleteSchedule={handleDeleteSchedule}
-          config={config}
         />
       </div>
     </div>

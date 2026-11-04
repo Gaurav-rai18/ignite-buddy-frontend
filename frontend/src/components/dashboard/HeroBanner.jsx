@@ -1,7 +1,23 @@
+/**
+ * @file HeroBanner.jsx
+ * @description Dashboard welcome banner that gives the admin a quick overview of
+ *              the Ignite Buddy platform capabilities and shows the count of
+ *              upcoming scheduled publishes. Includes a CTA button that navigates
+ *              to the Schedule management page.
+ *
+ * Data flow: `upcomingCount` is derived from the summary data fetched by the
+ *            Dashboard page from the Django REST API.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CalendarClock, ArrowUpRight } from 'lucide-react';
 
+/**
+ * Welcome / overview banner on the Dashboard page.
+ *
+ * @param {Object} props
+ * @param {number} props.upcomingCount - Number of documents/links scheduled for future publication.
+ */
 export function HeroBanner({ upcomingCount = 0 }) {
   const navigate = useNavigate();
 

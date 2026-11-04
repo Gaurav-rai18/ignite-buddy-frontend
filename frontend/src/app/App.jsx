@@ -1,3 +1,25 @@
+/**
+ * @file App.jsx
+ * @description Root application component with routing configuration.
+ *
+ * Structure:
+ *   App → AuthProvider → AppRoutes
+ *
+ * Route layout:
+ *   /login       — Public-only login page (redirects to /dashboard if already authenticated).
+ *   /            — Protected routes wrapped in AppLayout (sidebar + topbar):
+ *     /dashboard   — Dashboard with stats and quick actions.
+ *     /broadcast   — Compose and view broadcast announcements.
+ *     /schedule    — Create, upload, and manage timetable schedules.
+ *     /buddy       — Toggle the Ignite Buddy AI assistant.
+ *     /users       — Manage campus users (CRUD).
+ *     /documents   — Upload knowledge-base documents for RAG.
+ *     *            — 404 Not Found fallback.
+ *
+ * Also manages:
+ *   - Toast notification state (passed as onNotify to child pages).
+ *   - Broadcast count for the sidebar badge.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../hooks/useAuth';

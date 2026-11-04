@@ -1,3 +1,27 @@
+/**
+ * ScheduleGridBuilder.jsx — Interactive 7-Location Timetable Grid Builder.
+ *
+ * Features:
+ *  - Renders 7 location columns in fixed order:
+ *      Lab 1 (Hardware), Lab 2 (Software), Lab 3 (Data & AI), Lab 4 (Cloud Ops),
+ *      Work Area, TR1, TR2 (Incubator column removed).
+ *  - Working day pills: strictly Monday through Friday.
+ *  - Configurable time slot rows: (e.g. 9:00 AM – 11:00 AM, 11:30 AM – 1:30 PM, etc.).
+ *  - Grid cells:
+ *      • Topic input field: enter lab subject/course title.
+ *      • Dynamic batch selector: chips for sub-batches (A1..A4, B1..B4, C1..C4, etc.).
+ *      • Clear cell button: removes all assigned sub-batches from that cell.
+ *  - Top bar actions:
+ *      • Assigned slot counter (e.g., "7 / 28 slots assigned").
+ *      • "+ Add Batch" modal button for dynamic cohort creation.
+ *      • "+ Add Time Slot" modal button for dynamic period creation.
+ *      • "Clear [Day]" button to reset current day's entries.
+ *
+ * State structure:
+ *  value.day: string ('Monday')
+ *  value.grid: { [timeSlot]: { [location]: { topic: string, subbatches: string[] } } }
+ */
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Clock,

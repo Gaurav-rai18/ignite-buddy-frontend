@@ -1,3 +1,8 @@
+/**
+ * @file SchedulePreviewModal.jsx
+ * @description Modal dialog previewing a selected schedule item.
+ * Displays details (title, type, publish time, content / Excel file) before or after publishing.
+ */
 import React, { useState, useEffect } from 'react';
 import {
   X,

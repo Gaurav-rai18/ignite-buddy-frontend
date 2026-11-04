@@ -1,3 +1,15 @@
+"""
+config/settings.py — Django Application Configuration.
+
+Key configurations:
+  - SECRET_KEY & DEBUG: Development security defaults.
+  - INSTALLED_APPS: Includes DRF, CORS headers, and the local 'core' app.
+  - AUTH_USER_MODEL: Points to 'core.User' custom authentication model.
+  - CORS: Configured for Vite frontend dev server (port 5173/5174).
+  - DATABASES: SQLite (db.sqlite3).
+  - MEDIA: Configured for uploaded schedule Excel spreadsheets.
+"""
+
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent

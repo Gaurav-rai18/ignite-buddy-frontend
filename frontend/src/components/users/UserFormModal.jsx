@@ -1,3 +1,8 @@
+/**
+ * @file UserFormModal.jsx
+ * @description Modal dialog for creating a new user or editing an existing user's details.
+ * Manages form state, input validation, and submission via usersService.
+ */
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Edit3 } from 'lucide-react';
 import { Field } from '../ui/Field';

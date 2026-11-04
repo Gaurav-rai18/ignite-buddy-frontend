@@ -1,3 +1,8 @@
+/**
+ * @file DeleteDocumentDialog.jsx
+ * @description Confirmation dialog modal when an administrator deletes a document
+ * from the RAG knowledge base.
+ */
 import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 

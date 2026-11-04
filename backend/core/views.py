@@ -1,3 +1,33 @@
+"""
+core/views.py — API views for the Ignite Buddy Admin Console.
+
+This module contains all ViewSets and function-based views that make up the
+REST API. The views are organized into:
+
+  Authentication:
+    login_view — POST /api/login/
+
+  CRUD ViewSets (registered via DRF router in urls.py):
+    UserViewSet          — /api/users/
+    BroadcastViewSet     — /api/broadcasts/
+    ScheduledLinkViewSet — /api/schedules/        (supports JSON + multipart FormData)
+    ScheduleLocationViewSet  — /api/schedule-locations/
+    ScheduleBatchViewSet     — /api/schedule-batches/    (auto-creates sub-batches)
+    ScheduleSubBatchViewSet  — /api/schedule-subbatches/
+    ScheduleTimeSlotViewSet  — /api/schedule-timeslots/
+    ScheduleWeekDayViewSet   — /api/schedule-weekdays/   (blocks Saturday/Sunday)
+
+  Function-based views:
+    schedule_config_view       — GET  /api/schedule-config/
+    schedule_excel_template_view — GET  /api/schedule-template/
+    schedule_parse_excel_view  — POST /api/schedules/parse-excel/
+    buddy_setting              — GET/PATCH /api/settings/buddy/
+    dashboard_summary          — GET  /api/dashboard/
+
+All endpoints currently use AllowAny or no explicit permission (for dev).
+In production, add proper authentication/authorization.
+"""
+
 import json
 from django.utils import timezone
 from django.http import HttpResponse
@@ -33,6 +63,16 @@ from .excel_utils import generate_schedule_template, parse_schedule_excel
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
+    """
+    Authenticate a user and return their profile + mock token.
+
+    POST /api/login/
+    Body: { "username": "...", "password": "..." }
+
+    Returns 200 with user data + token on success, 401 on bad credentials.
+    Currently uses Django's built-in authenticate() and returns a mock token
+    (not JWT). In production, replace with a proper token system.
+    """
     username = request.data.get('username')
     password = request.data.get('password')
     
@@ -55,18 +95,42 @@ def login_view(request):
         return Response({'detail': 'Invalid username or password.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class UserViewSet(viewsets.ModelViewSet):
+    """CRUD API for campus users. GET /api/users/, POST, PUT, PATCH, DELETE."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+
 class BroadcastViewSet(viewsets.ModelViewSet):
+    """CRUD API for broadcast announcements. Ordered by newest first."""
     queryset = Broadcast.objects.all()
     serializer_class = BroadcastSerializer
 
+
 class ScheduledLinkViewSet(viewsets.ModelViewSet):
+    """
+    CRUD API for schedule items (timetables, links, Excel uploads).
+
+    GET  /api/schedules/     — List all schedules (ordered by publish_at).
+    POST /api/schedules/     — Create a new schedule.
+    DELETE /api/schedules/N/ — Delete schedule with id=N.
+
+    The create() method is overridden to support two payload formats:
+      1. JSON body — for native grid schedules (schedule_type='grid').
+      2. Multipart FormData — for Excel uploads (schedule_type='excel'),
+         where the .xlsx file is in request.FILES['excel_file'].
+    """
     queryset = ScheduledLink.objects.all()
     serializer_class = ScheduledLinkSerializer
 
     def create(self, request, *args, **kwargs):
+        """
+        Handle both JSON and multipart FormData schedule creation.
+
+        For Excel uploads, the file is extracted from request.FILES,
+        schedule_type is auto-set to 'excel', and file metadata is populated.
+        For native grid, the payload is plain JSON with content_data as a
+        JSON-stringified timetable object.
+        """
         # Support both standard json and multipart form data
         data = request.data.copy()
         excel_file = request.FILES.get('excel_file')
@@ -84,18 +148,45 @@ class ScheduledLinkViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 class ScheduleLocationViewSet(viewsets.ModelViewSet):
+    """CRUD API for timetable grid locations (Lab 1, Lab 2, ..., TR2)."""
     queryset = ScheduleLocation.objects.all()
     serializer_class = ScheduleLocationSerializer
 
+
 class ScheduleBatchViewSet(viewsets.ModelViewSet):
+    """
+    CRUD API for batch groups (Batch A, Batch B, etc.).
+
+    POST /api/schedule-batches/ — Creates a new batch and auto-generates
+    sub-batches (4 by default, configurable via 'subbatches_count').
+
+    Business rules:
+      - Code is auto-derived from name if not provided (e.g., 'Batch D' → 'D').
+      - Name is auto-derived from code if not provided (e.g., 'D' → 'Batch D').
+      - Duplicate name or code → 400 Bad Request.
+      - Order defaults to (current count + 1).
+
+    DELETE /api/schedule-batches/N/ — Deletes batch and CASCADE-deletes
+    all its sub-batches.
+    """
     queryset = ScheduleBatch.objects.prefetch_related('subbatches').all()
     serializer_class = ScheduleBatchSerializer
 
     def create(self, request, *args, **kwargs):
+        """
+        Create a new batch with auto-generated sub-batches.
+
+        Steps:
+          1. Extract and normalize name/code from request.
+          2. Check for duplicates (code and name, case-insensitive).
+          3. Create the ScheduleBatch row.
+          4. Auto-create N sub-batches (default 4): D1, D2, D3, D4.
+          5. Return the full batch with nested subbatches.
+        """
         name = request.data.get('name', '').strip()
         code = request.data.get('code', '').strip().upper()
         if not code and name:
-            # Generate code from name (e.g. "Batch D" -> "D")
+            # Auto-derive code from name: "Batch D" → "D"
             code = name.replace('Batch', '').strip().upper()[:5] or name[:2].upper()
         if not name and code:
             name = f'Batch {code}'
@@ -111,7 +202,7 @@ class ScheduleBatchViewSet(viewsets.ModelViewSet):
 
         batch = ScheduleBatch.objects.create(name=name, code=code, order=order)
 
-        # Auto-create initial subbatches if specified or create 4 by default
+        # Auto-create initial subbatches (default 4: e.g., D1, D2, D3, D4)
         initial_count = int(request.data.get('subbatches_count', 4))
         for i in range(1, initial_count + 1):
             ScheduleSubBatch.objects.create(
@@ -125,6 +216,15 @@ class ScheduleBatchViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class ScheduleSubBatchViewSet(viewsets.ModelViewSet):
+    """
+    CRUD API for individual sub-batches (A1, A2, B3, D5, etc.).
+
+    POST /api/schedule-subbatches/ — Creates a sub-batch in a given batch.
+    If name/code are omitted, auto-generates the next sequential number
+    (e.g., if batch A has A1-A4, creates A5).
+
+    Validates: parent batch exists, no duplicate code within the same batch.
+    """
     queryset = ScheduleSubBatch.objects.all()
     serializer_class = ScheduleSubBatchSerializer
 
@@ -157,6 +257,17 @@ class ScheduleSubBatchViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class ScheduleTimeSlotViewSet(viewsets.ModelViewSet):
+    """
+    CRUD API for timetable time slots.
+
+    POST  /api/schedule-timeslots/   — Create a new time slot.
+    PATCH /api/schedule-timeslots/N/ — Update an existing time slot.
+    DELETE /api/schedule-timeslots/N/ — Remove a time slot.
+
+    Validation: duplicate label → 400. start_time and end_time required.
+    The label is auto-generated as '{start} – {end}' if not provided.
+    Overlap detection is done client-side (validation.js), not server-side.
+    """
     queryset = ScheduleTimeSlot.objects.all()
     serializer_class = ScheduleTimeSlotSerializer
 
@@ -186,6 +297,13 @@ class ScheduleTimeSlotViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class ScheduleWeekDayViewSet(viewsets.ModelViewSet):
+    """
+    CRUD API for schedule weekdays.
+
+    POST /api/schedule-weekdays/ — Create a weekday.
+    IMPORTANT: Saturday and Sunday are explicitly rejected (400 error)
+    to enforce the 5-day working schedule policy.
+    """
     queryset = ScheduleWeekDay.objects.all()
     serializer_class = ScheduleWeekDaySerializer
 
@@ -201,7 +319,22 @@ class ScheduleWeekDayViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 def schedule_config_view(request):
     """
-    Returns the complete dynamic configuration for schedule builder.
+    Return the complete dynamic configuration for the schedule builder.
+
+    GET /api/schedule-config/
+
+    This is the first API call the frontend makes when the Schedule page loads.
+    It returns all four config arrays in a single response so the React grid
+    knows what columns (locations), rows (time slots), day tabs (weekdays),
+    and batch chip groups (batches + sub-batches) to render.
+
+    Response shape:
+    {
+      "locations":  [{ id, name, badge, color, order }],
+      "batches":    [{ id, name, code, order, subbatches: [{ id, batch, name, code, order }] }],
+      "time_slots": [{ id, start_time, end_time, label, order }],
+      "weekdays":   [{ id, name, code, order }]
+    }
     """
     locations = ScheduleLocation.objects.all()
     batches = ScheduleBatch.objects.prefetch_related('subbatches').all()
@@ -218,7 +351,18 @@ def schedule_config_view(request):
 @api_view(['GET'])
 def schedule_excel_template_view(request):
     """
-    Generates and returns an Excel schedule template using current database locations and batches.
+    Generate and download a styled Excel timetable template.
+
+    GET /api/schedule-template/
+
+    Dynamically reads current locations, batches, and time slots from the DB
+    to create a pre-formatted .xlsx template with:
+      - Correct column headers (Day, Start Time, End Time, Lab/Location, etc.)
+      - Sample data rows using actual location names
+      - An 'Instructions & Valid Values' reference sheet
+      - Professional styling (header colors, borders, column widths)
+
+    Returns the file as a downloadable attachment.
     """
     locations = list(ScheduleLocation.objects.values_list('name', flat=True))
     batches = list(ScheduleBatch.objects.values_list('name', flat=True))
@@ -236,7 +380,33 @@ def schedule_excel_template_view(request):
 @api_view(['POST'])
 def schedule_parse_excel_view(request):
     """
-    Parses and validates an uploaded Excel schedule file.
+    Parse and validate an uploaded Excel timetable file.
+
+    POST /api/schedules/parse-excel/
+    Content-Type: multipart/form-data
+    Body: { file: <uploaded .xlsx/.xls file> }
+
+    Processing steps:
+      1. Validate file presence and extension (.xlsx or .xls).
+      2. Load valid location names from the database for matching.
+      3. Call parse_schedule_excel() from excel_utils to extract grid data.
+      4. Return parsed data or validation errors.
+
+    Success response (200):
+    {
+      "success": true,
+      "file_name": "schedule.xlsx",
+      "file_size": 12480,
+      "total_rows_parsed": 9,
+      "days_found": ["Monday", "Tuesday"],
+      "selected_day": "Monday",
+      "days_data": { [day]: { [timeSlot]: { [location]: { topic, subbatches[] } } } },
+      "grid": { ... Monday's data ... },
+      "warnings": []
+    }
+
+    Error response (400):
+    { "success": false, "errors": ["..."] }
     """
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
@@ -273,6 +443,13 @@ def schedule_parse_excel_view(request):
 
 @api_view(['GET', 'PATCH'])
 def buddy_setting(request):
+    """
+    Get or update the Buddy AI assistant availability status.
+
+    GET   /api/settings/buddy/ — Returns { "enabled": true/false, "updated_at": "..." }
+    PATCH /api/settings/buddy/ — Body: { "enabled": true/false }
+                                 Updates site-wide setting in SiteSetting model.
+    """
     setting, _ = SiteSetting.objects.get_or_create(key='buddy_enabled', defaults={'value': 'true'})
     if request.method == 'PATCH':
         enabled = request.data.get('enabled')
@@ -284,6 +461,17 @@ def buddy_setting(request):
 
 @api_view(['GET'])
 def dashboard_summary(request):
+    """
+    Aggregate metrics for the Admin Dashboard home screen.
+
+    GET /api/dashboard/
+
+    Returns counts of:
+      - Total published broadcasts
+      - Total schedules
+      - Upcoming schedules (publish_at >= now)
+      - Buddy AI active state
+    """
     return Response({
         'broadcast_count': Broadcast.objects.count(),
         'scheduled_count': ScheduledLink.objects.count(),

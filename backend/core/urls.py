@@ -1,3 +1,26 @@
+"""
+core/urls.py — URL Routing for the Core Backend Application.
+
+Registers DRF ViewSets using DefaultRouter and defines standalone URL paths
+for custom API endpoints:
+  - DefaultRouter provides automatic RESTful endpoints:
+      /api/users/
+      /api/broadcasts/
+      /api/schedules/
+      /api/schedule-locations/
+      /api/schedule-batches/
+      /api/schedule-subbatches/
+      /api/schedule-timeslots/
+      /api/schedule-weekdays/
+  - Custom Views:
+      /api/schedule-config/   -> schedule_config_view (complete timetable metadata)
+      /api/schedule-template/ -> schedule_excel_template_view (downloadable .xlsx)
+      /api/schedules/parse-excel/ -> schedule_parse_excel_view (validate/parse file)
+      /api/login/             -> login_view (authentication)
+      /api/settings/buddy/    -> buddy_setting (toggle Buddy exam mode)
+      /api/dashboard/         -> dashboard_summary (metrics counters)
+"""
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (

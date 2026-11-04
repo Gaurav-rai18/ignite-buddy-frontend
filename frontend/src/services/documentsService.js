@@ -1,3 +1,26 @@
+/**
+ * @file documentsService.js
+ * @description Client-side service for document (knowledge-base) management.
+ *
+ * Unlike other services that call the Django REST API, this service uses
+ * localStorage as a simulated backend. Documents represent files uploaded
+ * for the RAG (Retrieval-Augmented Generation) pipeline used by Ignite Buddy.
+ *
+ * Key concepts:
+ *   - Documents are persisted in localStorage under STORAGE_KEY.
+ *   - Uploaded file Blobs are kept in an in-memory Map (`fileBlobRegistry`)
+ *     so they can be opened as browser object-URLs until the page is refreshed.
+ *   - New uploads start in "Processing" status and transition to "Ready"
+ *     after a simulated 2-second delay (mimicking chunking / vectorization).
+ *
+ * Data flow:
+ *   AddDocuments page / useDocuments hook → documentsService → localStorage
+ *
+ * @exports {Function} formatFileSize - Converts byte count to human-readable string.
+ * @exports {Object}   documentsService - CRUD methods for document management.
+ */
+
+/** localStorage key used to persist the document list across sessions */
 const STORAGE_KEY = 'ignite_buddy_documents_rag';
 
 // In-memory registry for uploaded file Blobs so real uploaded PDFs can be opened in browser tabs
@@ -95,20 +118,32 @@ Module 3: Retrieval-Augmented Generation (RAG) & Vector Databases
   },
 ];
 
+/**
+ * Reads the document list from localStorage, seeding it with INITIAL_DOCUMENTS
+ * on first access or when the stored data is corrupted / empty.
+ * @returns {Array<Object>} The stored document list.
+ */
 function getStoredDocuments() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
+      // First visit — seed localStorage with demo documents
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DOCUMENTS));
       return INITIAL_DOCUMENTS;
     }
     const parsed = JSON.parse(raw);
+    // Fall back to seed data if parse yields non-array or empty array
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_DOCUMENTS;
   } catch {
     return INITIAL_DOCUMENTS;
   }
 }
 
+/**
+ * Persists the document list to localStorage.
+ * Silently catches quota-exceeded errors so the app doesn't crash.
+ * @param {Array<Object>} docs - The full document list to save.
+ */
 function saveStoredDocuments(docs) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
@@ -117,26 +152,52 @@ function saveStoredDocuments(docs) {
   }
 }
 
+/**
+ * Converts a raw byte count into a human-readable size string (e.g. "2.4 MB").
+ * Uses base-1024 (binary) unit progression: B → KB → MB → GB.
+ * @param {number} bytes - File size in bytes.
+ * @returns {string} Formatted file size string.
+ */
 export function formatFileSize(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
+  // Determine the appropriate unit index using logarithm
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export const documentsService = {
+  /**
+   * Retrieves all documents. Adds a small artificial delay to simulate network latency.
+   * @returns {Promise<Array<Object>>} The full list of stored documents.
+   */
   getDocuments: async () => {
     await new Promise((resolve) => setTimeout(resolve, 80));
     return getStoredDocuments();
   },
 
+  /**
+   * Uploads a new document to the local knowledge base.
+   * Extracts text content (for TXT files) or generates a metadata stub (for PDFs),
+   * persists the document in localStorage, and schedules a 2-second simulated
+   * "processing → ready" transition to mimic RAG vectorization.
+   *
+   * @param {Object} params
+   * @param {File}   params.file        - The browser File object to upload.
+   * @param {string} [params.name]      - Display name (falls back to filename without extension).
+   * @param {string} [params.audience]  - Target audience label (default: 'All students').
+   * @param {string} [params.description] - Optional description of the document.
+   * @returns {Promise<Object>} The newly created document record.
+   */
   uploadDocument: async ({ file, name, audience = 'All students', description = '' }) => {
+    // Simulate upload network delay
     await new Promise((resolve) => setTimeout(resolve, 350));
     const current = getStoredDocuments();
 
     const isPdf = file.name.toLowerCase().endsWith('.pdf');
     const fileType = isPdf ? 'PDF' : 'TXT';
+    // Estimate the number of RAG chunks based on ~40KB per chunk, with a minimum of 4
     const estimatedChunks = Math.max(4, Math.floor(file.size / 40000));
 
     // Read text content if .txt file
@@ -151,11 +212,13 @@ export const documentsService = {
       extractedText = `PDF Document: ${file.name}\nSize: ${formatFileSize(file.size)}\nStatus: Processed & Vectorized for RAG.\nReady for semantic search queries.`;
     }
 
+    // Generate a unique ID using timestamp to avoid collisions in localStorage
     const docId = `doc-rag-${Date.now()}`;
 
     // Register file in memory for native PDF viewing
     fileBlobRegistry.set(docId, file);
 
+    // Use provided name, or strip file extension to create a clean display title
     const docTitle = (name || '').trim() || file.name.replace(/\.[^/.]+$/, '');
 
     const newDoc = {
@@ -176,6 +239,7 @@ export const documentsService = {
       hasBlob: true,
     };
 
+    // Prepend the new document so it appears first in the list
     const updated = [newDoc, ...current];
     saveStoredDocuments(updated);
 
@@ -193,6 +257,11 @@ export const documentsService = {
     return newDoc;
   },
 
+  /**
+   * Deletes a document by ID from localStorage and the in-memory blob registry.
+   * @param {string} docId - The document's unique ID.
+   * @returns {Promise<{success: boolean, id: string}>}
+   */
   deleteDocument: async (docId) => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const current = getStoredDocuments();
@@ -202,6 +271,12 @@ export const documentsService = {
     return { success: true, id: docId };
   },
 
+  /**
+   * Retrieves a single document's full details by ID.
+   * @param {string} docId - The document's unique ID.
+   * @returns {Promise<Object>} The document object.
+   * @throws {Error} If the document is not found.
+   */
   getDocumentDetails: async (docId) => {
     await new Promise((resolve) => setTimeout(resolve, 60));
     const current = getStoredDocuments();

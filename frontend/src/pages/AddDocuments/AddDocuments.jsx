@@ -1,3 +1,23 @@
+/**
+ * @file AddDocuments.jsx
+ * @description Document upload and knowledge-base management page for the Ignite Buddy admin panel.
+ *
+ * This page lets administrators:
+ *  - Upload PDF/text files that feed into the Buddy RAG (Retrieval-Augmented Generation) pipeline.
+ *  - Search, filter (by processing status), view, and delete existing documents.
+ *  - Refresh the document list from the backend API.
+ *
+ * Data flow:
+ *  useDocuments() hook  →  fetches documents from the Django REST API
+ *                       →  exposes CRUD helpers (uploadDoc, deleteDoc, refetch)
+ *                       →  provides client-side search & status filtering
+ *
+ * Key exports:
+ *  - AddDocuments (React component) — the main page rendered at the /documents route.
+ *
+ * @module pages/AddDocuments
+ */
+
 import React, { useState } from 'react';
 import { FileText, Plus, Search, RotateCw, Sparkles } from 'lucide-react';
 import { useDocuments } from '../../hooks/useDocuments';
@@ -8,7 +28,18 @@ import { DocumentViewerModal } from '../../components/documents/DocumentViewerMo
 import { DeleteDocumentDialog } from '../../components/documents/DeleteDocumentDialog';
 import { ErrorBanner } from '../../components/ui/ErrorBanner';
 
+/**
+ * AddDocuments page component.
+ * Renders the full document management UI — upload modal, search/filter bar,
+ * document list, detail viewer, and delete confirmation dialog.
+ *
+ * @param {Object}   props
+ * @param {Function} [props.onNotify] - Callback to show a toast/notification in the app shell.
+ * @returns {JSX.Element}
+ */
 export function AddDocuments({ onNotify }) {
+  // Pull all document state and CRUD actions from the custom hook.
+  // The hook manages API calls, search filtering, and status filtering internally.
   const {
     documents,
     filteredDocuments,
@@ -23,12 +54,14 @@ export function AddDocuments({ onNotify }) {
     refetch,
   } = useDocuments();
 
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [selectedDocDetails, setSelectedDocDetails] = useState(null);
-  const [viewingDoc, setViewingDoc] = useState(null);
-  const [deletingDoc, setDeletingDoc] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // --- Modal / dialog visibility state ---
+  const [isUploadOpen, setIsUploadOpen] = useState(false);       // Upload modal open?
+  const [selectedDocDetails, setSelectedDocDetails] = useState(null); // Doc shown in details modal
+  const [viewingDoc, setViewingDoc] = useState(null);            // Doc shown in viewer modal
+  const [deletingDoc, setDeletingDoc] = useState(null);          // Doc pending delete confirmation
+  const [isRefreshing, setIsRefreshing] = useState(false);       // Refresh-button spinner guard
 
+  /** Re-fetches the document list from the API and notifies the user on completion. */
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refetch();
@@ -38,6 +71,7 @@ export function AddDocuments({ onNotify }) {
     }
   };
 
+  /** Sends the file + metadata to the backend and triggers RAG processing. */
   const handleUploadSubmit = async (uploadData) => {
     const created = await uploadDoc(uploadData);
     if (onNotify) {
@@ -45,6 +79,7 @@ export function AddDocuments({ onNotify }) {
     }
   };
 
+  /** Permanently removes a document from the knowledge base via API. */
   const handleDeleteConfirm = async (docId) => {
     await deleteDoc(docId);
     if (onNotify) {
@@ -52,6 +87,7 @@ export function AddDocuments({ onNotify }) {
     }
   };
 
+  /** Status filter options — mirrors the possible document processing states from the API. */
   const filterTabs = ['All', 'Ready', 'Processing', 'Failed'];
 
   return (

@@ -1,3 +1,9 @@
+/**
+ * @file Sidebar.jsx
+ * @description Navigation sidebar with links to all main pages.
+ * Highlights the active route via NavLink. Shows a broadcast count badge.
+ * Collapses on mobile via the `isOpen` prop controlled by Topbar's hamburger menu.
+ */
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {

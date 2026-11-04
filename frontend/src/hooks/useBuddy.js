@@ -1,3 +1,15 @@
+/**
+ * @file useBuddy.js
+ * @description Custom hook for the Ignite Buddy AI assistant toggle feature.
+ *
+ * Fetches the current buddy enabled/disabled setting from the backend on mount,
+ * and provides a toggleBuddy() function to flip the setting via PATCH.
+ *
+ * Data flow:
+ *   BuddyControl page → useBuddy() → buddyService → apiClient → Django /api/settings/buddy/
+ *
+ * @exports {Function} useBuddy - Hook returning buddy state, loading, toggle, and error.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buddyService } from '../services/buddyService';
 import { formatErrorMessage } from '../utils/error';

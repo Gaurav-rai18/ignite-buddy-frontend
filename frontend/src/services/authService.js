@@ -1,3 +1,12 @@
+/**
+ * authService.js — Authentication and User Session Management.
+ *
+ * Responsibilities:
+ *  - Handles user authentication against `/api/login/`.
+ *  - Manages session storage across `localStorage` (if remember=true) or `sessionStorage`.
+ *  - Provides utility methods: `getCurrentUser()`, `getToken()`, `logout()`.
+ */
+
 import { apiClient } from './apiClient';
 
 const AUTH_STORAGE_KEY = 'ignite_buddy_auth';

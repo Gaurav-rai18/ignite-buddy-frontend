@@ -1,3 +1,17 @@
+/**
+ * @file useDashboard.js
+ * @description Custom hook for the Dashboard page data.
+ *
+ * Fetches summary statistics, recent broadcasts, and buddy status in parallel
+ * on mount using Promise.all. Also provides a toggleBuddy() shortcut so the
+ * dashboard can flip the buddy setting without navigating to BuddyControl.
+ *
+ * Data flow:
+ *   Dashboard page → useDashboard() → dashboardService + broadcastService + buddyService
+ *                                    → apiClient → Django API
+ *
+ * @exports {Function} useDashboard - Hook returning summary, broadcasts, buddy, and actions.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { dashboardService } from '../services/dashboardService';
 import { broadcastService } from '../services/broadcastService';

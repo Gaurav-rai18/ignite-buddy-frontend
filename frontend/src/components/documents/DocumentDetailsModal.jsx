@@ -1,3 +1,8 @@
+/**
+ * @file DocumentDetailsModal.jsx
+ * @description Modal displaying comprehensive metadata for a document in the RAG knowledge base.
+ * Details include chunk count, file size, vector store location, and indexing status.
+ */
 import React, { useEffect } from 'react';
 import { FileText, X, CheckCircle2, Clock, AlertTriangle, Layers, Database, Hash } from 'lucide-react';
 

@@ -1,3 +1,18 @@
+/**
+ * @file useAuth.jsx
+ * @description Authentication context provider and hook for the Ignite Buddy app.
+ *
+ * Uses React Context to share auth state (user object, login/logout functions)
+ * across the entire component tree. The AuthProvider wraps the app in App.jsx
+ * and reads persisted credentials from authService on mount.
+ *
+ * Data flow:
+ *   Login page → useAuth().login() → authService.login() → Django /api/login/
+ *   Any component → useAuth() → { user, isAuthenticated, login, logout }
+ *
+ * @exports {Function} AuthProvider - Context provider component.
+ * @exports {Function} useAuth      - Hook to consume auth context.
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '../services/authService';
 

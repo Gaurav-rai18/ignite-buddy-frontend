@@ -1,3 +1,19 @@
+/**
+ * @file useBroadcasts.js
+ * @description Custom hook for broadcast management state and operations.
+ *
+ * Manages the full lifecycle of broadcasts: fetching the list, form state
+ * for composing new announcements, recipient targeting (all users / by role /
+ * specific users), validation, submission, and error handling.
+ *
+ * Uses AbortController for cleanup on unmount and isMountedRef to prevent
+ * state updates on unmounted components.
+ *
+ * Data flow:
+ *   Broadcast page → useBroadcasts() → broadcastService → apiClient → Django API
+ *
+ * @exports {Function} useBroadcasts - Hook returning broadcasts, form state, and actions.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { broadcastService } from '../services/broadcastService';
 import { validateBroadcastForm } from '../utils/validation';

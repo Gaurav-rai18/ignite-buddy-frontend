@@ -1,7 +1,26 @@
+/**
+ * @file BroadcastPreviewModal.jsx
+ * @description Read-only preview modal that shows the admin what a broadcast announcement
+ *              will look like before it is saved/sent. Displays recipient targeting summary,
+ *              the title, and the full message body. The modal can be dismissed via the
+ *              close button, the overlay backdrop, or the Escape key.
+ *
+ * Data flow: Receives the current broadcast `form` state object from the parent Broadcast
+ *            page — no API calls are made inside this component.
+ */
 import React, { useEffect } from 'react';
 import { X, Users, Megaphone } from 'lucide-react';
 
+/**
+ * Modal that previews a broadcast announcement before submission.
+ *
+ * @param {Object}   props
+ * @param {boolean}  props.isOpen  - Controls visibility of the modal.
+ * @param {Function} props.onClose - Callback to close/dismiss the modal.
+ * @param {Object}   props.form    - The broadcast form state with title, message, recipientMode, selectedUsers, and role.
+ */
 export function BroadcastPreviewModal({ isOpen, onClose, form }) {
+  // Close the modal when the user presses Escape; listener is added only while open
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
@@ -16,6 +35,8 @@ export function BroadcastPreviewModal({ isOpen, onClose, form }) {
 
   if (!isOpen) return null;
 
+  // Build a human-readable summary of who will receive this broadcast,
+  // depending on the chosen targeting mode (All users / By role / Specific users).
   const mode = form.recipientMode || 'All users';
   const selectedUsers = Array.isArray(form.selectedUsers) ? form.selectedUsers : [];
   const recipientSummary =
@@ -33,6 +54,7 @@ export function BroadcastPreviewModal({ isOpen, onClose, form }) {
       aria-labelledby="preview-title"
       onClick={onClose}
     >
+      {/* Stop propagation so clicking inside the card doesn't trigger the overlay's onClose */}
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -1,3 +1,8 @@
+/**
+ * @file DocumentUploadModal.jsx
+ * @description Modal providing drag-and-drop or file selector upload for PDF and TXT files.
+ * Handles file size validation, form metadata, and triggers documentsService.uploadDocument.
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, FileText, X, AlertCircle } from 'lucide-react';
 import { formatFileSize } from '../../services/documentsService';

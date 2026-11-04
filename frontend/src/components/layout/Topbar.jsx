@@ -1,3 +1,8 @@
+/**
+ * @file Topbar.jsx
+ * @description Top navigation bar with hamburger menu toggle, notification bell,
+ * and profile dropdown. Controls the sidebar visibility on mobile.
+ */
 import React, { useState } from 'react';
 import { Menu, Bell } from 'lucide-react';
 import { NotificationsDropdown } from './NotificationsDropdown';

@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+/*
+  ScheduleList Component
+  ----------------------
+  Displays a table/list of existing schedules fetched via `useSchedules` hook.
+  Provides actions to edit, preview, or delete a schedule entry.
+*/
+
+import React from 'react';, { useState } from 'react';
 import {
   CalendarClock,
   Link2,

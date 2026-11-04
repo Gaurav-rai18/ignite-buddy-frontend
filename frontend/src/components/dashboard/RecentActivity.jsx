@@ -1,9 +1,25 @@
+/**
+ * @file RecentActivity.jsx
+ * @description Dashboard panel that shows the most recent broadcast announcements
+ *              (up to 4). Each entry displays the title, target audience, and
+ *              creation timestamp. When no broadcasts exist, an empty-state CTA
+ *              prompts the admin to create one.
+ *
+ * Data flow: Receives the `broadcasts` array from the Dashboard page, which
+ *            fetches it from `broadcastService.getBroadcasts()`.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Megaphone, ArrowUpRight } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { formatDate } from '../../utils/date';
 
+/**
+ * Renders the recent broadcasts activity feed on the Dashboard.
+ *
+ * @param {Object} props
+ * @param {Array}  props.broadcasts - Array of broadcast objects; only the first 4 are displayed.
+ */
 export function RecentActivity({ broadcasts = [] }) {
   const navigate = useNavigate();
 
@@ -24,6 +40,7 @@ export function RecentActivity({ broadcasts = [] }) {
         </button>
       </div>
 
+      {/* Show at most 4 recent broadcasts; slice prevents rendering a long list */}
       {broadcasts && broadcasts.length > 0 ? (
         broadcasts.slice(0, 4).map((item) => (
           <div className="activity-item" key={item.id}>

@@ -1,6 +1,23 @@
+/**
+ * @file BuddyHero.jsx
+ * @description Hero banner at the top of the Buddy management page. Shows the
+ *              current Buddy chatbot status (ACTIVE / PAUSED) along with a
+ *              prominent toggle button styled as a danger action when turning off.
+ *
+ * Data flow: Purely presentational — receives state and callbacks from the parent
+ *            Buddy page component.
+ */
 import React from 'react';
 import { Bot, Power, CheckCircle2 } from 'lucide-react';
 
+/**
+ * Hero banner for the Buddy page with a large status toggle button.
+ *
+ * @param {Object}   props
+ * @param {boolean}  props.buddy         - Current Buddy enabled/disabled state.
+ * @param {boolean}  props.isUpdating    - True while the toggle API request is pending.
+ * @param {Function} props.onToggleBuddy - Callback to flip the Buddy state.
+ */
 export function BuddyHero({ buddy, isUpdating, onToggleBuddy }) {
   return (
     <section className="buddy-hero-banner">
@@ -25,6 +42,7 @@ export function BuddyHero({ buddy, isUpdating, onToggleBuddy }) {
       </div>
 
       <div>
+        {/* Show a danger-styled button when Buddy is active (turning OFF is destructive) */}
         <button
           type="button"
           className={`primary-button ${buddy ? 'danger-button' : ''}`}

@@ -1,7 +1,18 @@
+/**
+ * @file QuickActions.jsx
+ * @description Dashboard panel with large shortcut buttons that navigate admins
+ *              directly to the three core workflows: Broadcast, Schedule, and
+ *              Buddy management. Each button uses `react-router-dom`'s
+ *              `useNavigate` for client-side routing.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Link2, Bot, ArrowUpRight } from 'lucide-react';
 
+/**
+ * Renders a set of quick-action navigation buttons on the Dashboard.
+ * No props required — routes are hard-coded to the app's internal paths.
+ */
 export function QuickActions() {
   const navigate = useNavigate();
 

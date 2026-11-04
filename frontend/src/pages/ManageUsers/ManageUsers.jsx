@@ -1,3 +1,8 @@
+/**
+ * @file ManageUsers.jsx
+ * @description User management page with CRUD operations, search, and table display.
+ * Uses useUsers hook → usersService → Django /api/users/.
+ */
 import React, { useState } from 'react';
 import { Users, UserPlus, Search, RotateCw, ShieldAlert } from 'lucide-react';
 import { useUsers } from '../../hooks/useUsers';

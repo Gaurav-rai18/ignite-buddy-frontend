@@ -1,3 +1,7 @@
+/**
+ * @file NotFound.jsx
+ * @description 404 page shown for unrecognized routes. Provides a button to navigate back to the dashboard.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutDashboard } from 'lucide-react';

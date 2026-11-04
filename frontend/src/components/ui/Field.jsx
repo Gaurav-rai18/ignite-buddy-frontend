@@ -1,3 +1,9 @@
+/**
+ * @file Field.jsx
+ * @description Reusable form field wrapper that renders a label, its children
+ * (input/textarea/select), optional help text, and validation error message.
+ * @param {Object} props - { label, children, htmlFor, error, helpText }
+ */
 import React from 'react';
 
 export function Field({ label, children, htmlFor, error, helpText }) {

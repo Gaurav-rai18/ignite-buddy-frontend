@@ -1,3 +1,11 @@
+/*
+  BroadcastForm Component
+  -----------------------
+  Provides a form for creating a new broadcast message.
+  Handles form state, validation, and submission to the backend via `broadcastService`.
+  On successful submission, it triggers a refresh of the broadcast list and closes the modal.
+*/
+
 import React, { useState } from 'react';
 import { Megaphone, Users, Send, Eye, AlertTriangle, X } from 'lucide-react';
 import { Field } from '../ui/Field';

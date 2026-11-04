@@ -1,3 +1,14 @@
+"""
+core/excel_utils.py — Excel Template Generator and Spreadsheet Parser.
+
+This module uses `openpyxl` to:
+  1. Generate standardized Excel schedule templates (`generate_schedule_template`)
+     formatted with current locations, batches, and time slots from the database.
+  2. Parse uploaded schedule spreadsheets (`parse_schedule_excel`), extracting
+     days, time slots, locations, topics, and batch assignments into a structured
+     nested dictionary for preview and database persistence.
+"""
+
 import io
 import re
 from datetime import datetime, time
@@ -28,6 +39,21 @@ def normalize_day(val):
     return s
 
 def generate_schedule_template(locations=None, batches=None, timeslots=None):
+    """
+    Generate a formatted Excel workbook (.xlsx) as binary bytes.
+
+    Includes:
+      - 'Schedule' worksheet with styled table headers, sample data, and column widths.
+      - 'Instructions & Valid Values' sheet detailing accepted days (Mon-Fri) and formats.
+
+    Args:
+        locations (list[str], optional): List of location names (Lab 1..4, Work Area, TR1, TR2).
+        batches (list[str], optional): List of batch names.
+        timeslots (list[str], optional): List of time slot labels.
+
+    Returns:
+        bytes: Binary content of the generated .xlsx file.
+    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'Schedule'
@@ -138,7 +164,33 @@ def generate_schedule_template(locations=None, batches=None, timeslots=None):
 
 def parse_schedule_excel(file_bytes_or_stream, valid_locations=None, valid_batches=None):
     """
-    Parses uploaded Excel timetable and returns structured timetable data or errors.
+    Parse an uploaded Excel timetable workbook and return structured timetable data.
+
+    Workflow:
+      1. Open workbook and find sheet named 'Schedule' or 'Timetable' (or fallback to active).
+      2. Scan top 5 rows to locate header row matching required column labels.
+      3. For each data row:
+         - Validate working day (strictly Monday-Friday; rejects Saturday/Sunday).
+         - Normalize start and end time into a unified time slot string (e.g., '9:00 AM – 11:00 AM').
+         - Map location against valid database locations.
+         - Parse sub-batches (comma/semicolon/space separated) or expand batch group code.
+         - Merge multiple entries belonging to the same day, time slot, and location.
+
+    Args:
+        file_bytes_or_stream: Raw file bytes or file-like stream object.
+        valid_locations (list[str], optional): Valid location names from DB.
+        valid_batches (list[str], optional): Valid batch names from DB.
+
+    Returns:
+        dict: {
+            'valid': bool,
+            'errors': list[str],
+            'days_data': dict,
+            'selected_day': str,
+            'grid': dict,
+            'total_rows_parsed': int,
+            'days_found': list[str],
+        }
     """
     errors = []
     warnings = []
@@ -344,3 +396,4 @@ def parse_schedule_excel(file_bytes_or_stream, valid_locations=None, valid_batch
         'total_rows_parsed': row_count,
         'days_found': list(days_data.keys()),
     }
+
