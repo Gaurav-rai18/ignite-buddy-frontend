@@ -8,28 +8,81 @@ import {
   CheckCircle2,
   Sparkles,
   Info,
+  Plus,
+  Settings,
+  Layers,
 } from 'lucide-react';
-import { SCHEDULE_TIME_SLOTS, SCHEDULE_LOCATIONS, SCHEDULE_DAYS } from '../../constants';
+import {
+  DEFAULT_SCHEDULE_LOCATIONS,
+  DEFAULT_LAB_METADATA,
+  DEFAULT_SCHEDULE_DAYS,
+  DEFAULT_SCHEDULE_TIME_SLOTS,
+} from '../../constants';
+import { BatchManagerModal } from './BatchManagerModal';
+import { TimeSlotManagerModal } from './TimeSlotManagerModal';
 
-const LAB_METADATA = {
-  'Lab 1': { badge: 'Hardware', color: '#014BAA' },
-  'Lab 2': { badge: 'Software', color: '#0284C7' },
-  'Lab 3': { badge: 'Data & AI', color: '#7C3AED' },
-  'Lab 4': { badge: 'Cloud Ops', color: '#059669' },
-  'Incubator': { badge: 'Project Hall', color: '#D97706' },
-};
-
-const BATCH_GROUPS = {
-  A: ['a1', 'a2', 'a3', 'a4'],
-  B: ['b1', 'b2', 'b3', 'b4'],
-  C: ['c1', 'c2', 'c3', 'c4'],
-};
-
-export function ScheduleGridBuilder({ value, onChange, disabled }) {
+export function ScheduleGridBuilder({
+  value,
+  onChange,
+  disabled,
+  config,
+  onAddBatch,
+  onRemoveBatch,
+  onAddSubBatch,
+  onRemoveSubBatch,
+  onAddTimeSlot,
+  onEditTimeSlot,
+  onRemoveTimeSlot,
+}) {
   const gridData = value?.grid || {};
   const selectedDay = value?.day || 'Monday';
   const scrollRef = useRef(null);
   const [isScrolling, setIsScrolling] = useState(false);
+
+  // Modals state
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isTimeSlotModalOpen, setIsTimeSlotModalOpen] = useState(false);
+
+  // Extract dynamic items or fallback to defaults
+  const locations =
+    config?.locations?.length > 0
+      ? config.locations.map((l) => (typeof l === 'string' ? l : l.name))
+      : DEFAULT_SCHEDULE_LOCATIONS;
+
+  const weekdays =
+    config?.weekdays?.length > 0
+      ? config.weekdays.map((w) => (typeof w === 'string' ? w : w.name)).filter((d) => !['Saturday', 'Sunday'].includes(d))
+      : DEFAULT_SCHEDULE_DAYS;
+
+  const timeSlots =
+    config?.time_slots?.length > 0
+      ? config.time_slots.map((t) => (typeof t === 'string' ? t : t.label || `${t.start_time} – ${t.end_time}`))
+      : DEFAULT_SCHEDULE_TIME_SLOTS;
+
+  // Dynamic Batches
+  const batchGroups = {};
+  if (config?.batches?.length > 0) {
+    config.batches.forEach((b) => {
+      batchGroups[b.code] = (b.subbatches || []).map((s) => s.code.toLowerCase());
+    });
+  } else {
+    batchGroups['A'] = ['a1', 'a2', 'a3', 'a4'];
+    batchGroups['B'] = ['b1', 'b2', 'b3', 'b4'];
+    batchGroups['C'] = ['c1', 'c2', 'c3', 'c4'];
+  }
+
+  const batchGroupKeys = Object.keys(batchGroups);
+
+  // Color & Badge lookup for locations
+  const getLocationMeta = (locName) => {
+    if (config?.locations) {
+      const found = config.locations.find((l) => (typeof l === 'string' ? l : l.name) === locName);
+      if (found && found.badge) {
+        return { badge: found.badge, color: found.color || '#014BAA' };
+      }
+    }
+    return DEFAULT_LAB_METADATA[locName] || { badge: locName, color: '#014BAA' };
+  };
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -49,7 +102,7 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
       el.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
-  }, []);
+  }, [locations.length, timeSlots.length]);
 
   const handleDayChange = (day) => {
     onChange({ ...value, day });
@@ -76,9 +129,9 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
   };
 
   const toggleBatchGroup = (time, location, groupKey) => {
-    const groupItems = BATCH_GROUPS[groupKey] || [];
+    const groupItems = batchGroups[groupKey] || [];
     const current = gridData[time]?.[location]?.subbatches || [];
-    const allSelected = groupItems.every((item) => current.includes(item));
+    const allSelected = groupItems.length > 0 && groupItems.every((item) => current.includes(item));
 
     let next;
     if (allSelected) {
@@ -90,6 +143,18 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
       next = [...current, ...additions];
     }
     handleCellChange(time, location, 'subbatches', next);
+  };
+
+  const toggleAllBatchesInCell = (time, location) => {
+    const current = gridData[time]?.[location]?.subbatches || [];
+    const allKnownSubbatches = Object.values(batchGroups).flat();
+    const allSelected = allKnownSubbatches.length > 0 && allKnownSubbatches.every((s) => current.includes(s));
+
+    if (allSelected) {
+      handleCellChange(time, location, 'subbatches', []);
+    } else {
+      handleCellChange(time, location, 'subbatches', allKnownSubbatches);
+    }
   };
 
   const clearCellBatches = (time, location) => {
@@ -105,8 +170,8 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
   // Count how many slots on current day have content
   const countScheduledSlots = () => {
     let count = 0;
-    SCHEDULE_TIME_SLOTS.forEach((time) => {
-      SCHEDULE_LOCATIONS.forEach((loc) => {
+    timeSlots.forEach((time) => {
+      locations.forEach((loc) => {
         const cell = gridData[time]?.[loc];
         if (cell && (cell.topic?.trim() || (cell.subbatches && cell.subbatches.length > 0))) {
           count++;
@@ -117,16 +182,25 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
   };
 
   const scheduledSlotsCount = countScheduledSlots();
-  const totalSlots = SCHEDULE_TIME_SLOTS.length * SCHEDULE_LOCATIONS.length;
+  const totalSlots = timeSlots.length * locations.length;
+
+  const getBatchChipClass = (groupKey) => {
+    const k = groupKey.toUpperCase();
+    if (k === 'A') return 'batch-a';
+    if (k === 'B') return 'batch-b';
+    if (k === 'C') return 'batch-c';
+    if (k === 'D') return 'batch-d';
+    if (k === 'E') return 'batch-e';
+    return 'batch-custom';
+  };
 
   return (
     <div className="schedule-grid-builder">
-      {/* Top Header: Day Pill Navigation & Actions */}
+      {/* Top Header: Day Pill Navigation & Dynamic Controls */}
       <div className="builder-top-bar">
         <div className="day-pills-bar" role="tablist" aria-label="Select schedule day">
-          {SCHEDULE_DAYS.map((day) => {
+          {weekdays.map((day) => {
             const isActive = day === selectedDay;
-            // Short label for smaller screens
             const shortDay = day.slice(0, 3);
             return (
               <button
@@ -146,12 +220,36 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
         </div>
 
         <div className="builder-top-actions">
+          {/* Slot Count Badge */}
           <div className="slot-count-badge" title="Filled slots in timetable">
             <CheckCircle2 size={13} aria-hidden="true" />
             <span>
               <b>{scheduledSlotsCount}</b> / {totalSlots} slots assigned
             </span>
           </div>
+
+          {/* Dynamic Configuration Buttons */}
+          <button
+            type="button"
+            className="config-tool-btn"
+            onClick={() => setIsBatchModalOpen(true)}
+            disabled={disabled}
+            title="Configure dynamic batches and sub-batches"
+          >
+            <Users size={13} aria-hidden="true" />
+            <span>+ Add Batch</span>
+          </button>
+
+          <button
+            type="button"
+            className="config-tool-btn"
+            onClick={() => setIsTimeSlotModalOpen(true)}
+            disabled={disabled}
+            title="Configure dynamic time slots"
+          >
+            <Clock size={13} aria-hidden="true" />
+            <span>+ Add Time Slot</span>
+          </button>
 
           {scheduledSlotsCount > 0 && (
             <button
@@ -173,13 +271,15 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
         <div className="builder-instructions">
           <Users size={14} className="helper-icon" aria-hidden="true" />
           <span>
-            Click <b>All A / B / C</b> to assign an entire batch group, or toggle individual sub-batches (A1–C4).
+            Click <b>All A / B / C...</b> to assign batch groups, or click individual sub-batch chips. Seven locations available across 5 working days.
           </span>
         </div>
         <div className="batch-legend">
-          <span className="legend-item batch-a"><span className="legend-dot" /> Batch A</span>
-          <span className="legend-item batch-b"><span className="legend-dot" /> Batch B</span>
-          <span className="legend-item batch-c"><span className="legend-dot" /> Batch C</span>
+          {batchGroupKeys.map((k) => (
+            <span key={k} className={`legend-item ${getBatchChipClass(k)}`}>
+              <span className="legend-dot" /> Batch {k}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -197,8 +297,8 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
                   <span>Time / Lab</span>
                 </div>
               </th>
-              {SCHEDULE_LOCATIONS.map((loc) => {
-                const meta = LAB_METADATA[loc] || { badge: 'Lab', color: '#014BAA' };
+              {locations.map((loc) => {
+                const meta = getLocationMeta(loc);
                 return (
                   <th key={loc} className="lab-header-th">
                     <div className="lab-header-inner">
@@ -211,7 +311,7 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
             </tr>
           </thead>
           <tbody>
-            {SCHEDULE_TIME_SLOTS.map((time) => (
+            {timeSlots.map((time) => (
               <tr key={time}>
                 <td className="time-cell sticky-col">
                   <div className="time-cell-inner">
@@ -219,14 +319,15 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
                     <span className="time-label">{time}</span>
                   </div>
                 </td>
-                {SCHEDULE_LOCATIONS.map((loc) => {
+                {locations.map((loc) => {
                   const cell = gridData[time]?.[loc] || { topic: '', subbatches: [] };
                   const subbatches = cell.subbatches || [];
                   const hasContent = Boolean(cell.topic?.trim() || subbatches.length > 0);
 
-                  const isGroupAAll = BATCH_GROUPS.A.every((s) => subbatches.includes(s));
-                  const isGroupBAll = BATCH_GROUPS.B.every((s) => subbatches.includes(s));
-                  const isGroupCAll = BATCH_GROUPS.C.every((s) => subbatches.includes(s));
+                  const allKnownSubbatches = Object.values(batchGroups).flat();
+                  const isAllCellSelected =
+                    allKnownSubbatches.length > 0 &&
+                    allKnownSubbatches.every((s) => subbatches.includes(s));
 
                   return (
                     <td key={loc} className={`content-cell ${hasContent ? 'has-content' : ''}`}>
@@ -245,34 +346,37 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
                           />
                         </div>
 
-                        {/* Batch Quick-Actions (All A, All B, All C, Clear) */}
+                        {/* Batch Quick-Actions (All A, All B, All C..., Select All, Clear) */}
                         <div className="batch-presets-bar">
+                          {batchGroupKeys.map((groupKey) => {
+                            const groupSubs = batchGroups[groupKey] || [];
+                            const isGroupAll =
+                              groupSubs.length > 0 && groupSubs.every((s) => subbatches.includes(s));
+                            const chipClass = getBatchChipClass(groupKey);
+
+                            return (
+                              <button
+                                key={groupKey}
+                                type="button"
+                                className={`batch-preset-btn ${chipClass} ${isGroupAll ? 'active' : ''}`}
+                                onClick={() => toggleBatchGroup(time, loc, groupKey)}
+                                disabled={disabled}
+                                title={`Toggle all Batch ${groupKey} sub-batches`}
+                              >
+                                {isGroupAll ? `✓ All ${groupKey}` : `+ All ${groupKey}`}
+                              </button>
+                            );
+                          })}
+
+                          {/* Location Select All / Clear Quick Actions */}
                           <button
                             type="button"
-                            className={`batch-preset-btn batch-a ${isGroupAAll ? 'active' : ''}`}
-                            onClick={() => toggleBatchGroup(time, loc, 'A')}
+                            className={`batch-preset-btn select-all-btn ${isAllCellSelected ? 'active' : ''}`}
+                            onClick={() => toggleAllBatchesInCell(time, loc)}
                             disabled={disabled}
-                            title="Toggle all Batch A sub-batches (A1-A4)"
+                            title="Assign or unassign all available batches for this location"
                           >
-                            {isGroupAAll ? '✓ All A' : '+ All A'}
-                          </button>
-                          <button
-                            type="button"
-                            className={`batch-preset-btn batch-b ${isGroupBAll ? 'active' : ''}`}
-                            onClick={() => toggleBatchGroup(time, loc, 'B')}
-                            disabled={disabled}
-                            title="Toggle all Batch B sub-batches (B1-B4)"
-                          >
-                            {isGroupBAll ? '✓ All B' : '+ All B'}
-                          </button>
-                          <button
-                            type="button"
-                            className={`batch-preset-btn batch-c ${isGroupCAll ? 'active' : ''}`}
-                            onClick={() => toggleBatchGroup(time, loc, 'C')}
-                            disabled={disabled}
-                            title="Toggle all Batch C sub-batches (C1-C4)"
-                          >
-                            {isGroupCAll ? '✓ All C' : '+ All C'}
+                            {isAllCellSelected ? '✓ All' : '+ All'}
                           </button>
 
                           {subbatches.length > 0 && (
@@ -288,64 +392,32 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
                           )}
                         </div>
 
-                        {/* Sub-batch Chips Grid (Organized in 3 clear rows for Batch A, B, C) */}
+                        {/* Sub-batch Chips Organized by Batch Groups */}
                         <div className="subbatch-selector">
-                          {/* Row A */}
-                          <div className="sb-row batch-a-row">
-                            {BATCH_GROUPS.A.map((sb) => {
-                              const isActive = subbatches.includes(sb);
-                              return (
-                                <button
-                                  key={sb}
-                                  type="button"
-                                  className={`sb-chip batch-a ${isActive ? 'active' : ''}`}
-                                  onClick={() => toggleSubbatch(time, loc, sb)}
-                                  disabled={disabled}
-                                  title={`Toggle ${sb.toUpperCase()}`}
-                                >
-                                  {sb.toUpperCase()}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {batchGroupKeys.map((groupKey) => {
+                            const groupSubs = batchGroups[groupKey] || [];
+                            const chipClass = getBatchChipClass(groupKey);
 
-                          {/* Row B */}
-                          <div className="sb-row batch-b-row">
-                            {BATCH_GROUPS.B.map((sb) => {
-                              const isActive = subbatches.includes(sb);
-                              return (
-                                <button
-                                  key={sb}
-                                  type="button"
-                                  className={`sb-chip batch-b ${isActive ? 'active' : ''}`}
-                                  onClick={() => toggleSubbatch(time, loc, sb)}
-                                  disabled={disabled}
-                                  title={`Toggle ${sb.toUpperCase()}`}
-                                >
-                                  {sb.toUpperCase()}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Row C */}
-                          <div className="sb-row batch-c-row">
-                            {BATCH_GROUPS.C.map((sb) => {
-                              const isActive = subbatches.includes(sb);
-                              return (
-                                <button
-                                  key={sb}
-                                  type="button"
-                                  className={`sb-chip batch-c ${isActive ? 'active' : ''}`}
-                                  onClick={() => toggleSubbatch(time, loc, sb)}
-                                  disabled={disabled}
-                                  title={`Toggle ${sb.toUpperCase()}`}
-                                >
-                                  {sb.toUpperCase()}
-                                </button>
-                              );
-                            })}
-                          </div>
+                            return (
+                              <div key={groupKey} className={`sb-row ${chipClass}-row`}>
+                                {groupSubs.map((sb) => {
+                                  const isActive = subbatches.includes(sb);
+                                  return (
+                                    <button
+                                      key={sb}
+                                      type="button"
+                                      className={`sb-chip ${chipClass} ${isActive ? 'active' : ''}`}
+                                      onClick={() => toggleSubbatch(time, loc, sb)}
+                                      disabled={disabled}
+                                      title={`Toggle ${sb.toUpperCase()}`}
+                                    >
+                                      {sb.toUpperCase()}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </td>
@@ -356,6 +428,27 @@ export function ScheduleGridBuilder({ value, onChange, disabled }) {
           </tbody>
         </table>
       </div>
+
+      {/* Batch Management Modal */}
+      <BatchManagerModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        config={config}
+        onAddBatch={onAddBatch}
+        onRemoveBatch={onRemoveBatch}
+        onAddSubBatch={onAddSubBatch}
+        onRemoveSubBatch={onRemoveSubBatch}
+      />
+
+      {/* Time Slot Management Modal */}
+      <TimeSlotManagerModal
+        isOpen={isTimeSlotModalOpen}
+        onClose={() => setIsTimeSlotModalOpen(false)}
+        config={config}
+        onAddTimeSlot={onAddTimeSlot}
+        onEditTimeSlot={onEditTimeSlot}
+        onRemoveTimeSlot={onRemoveTimeSlot}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarClock, Grid3X3, Link2, ListOrdered, CalendarCheck } from 'lucide-react';
+import { CalendarClock, Grid3X3, FileSpreadsheet, ListOrdered, CalendarCheck, Link2 } from 'lucide-react';
 import { PageIntro } from '../../components/ui/PageIntro';
 import { ErrorBanner } from '../../components/ui/ErrorBanner';
 import { ScheduleForm } from '../../components/schedule/ScheduleForm';
@@ -10,6 +10,8 @@ export function Schedule({ onNotify }) {
   const {
     schedules,
     loading,
+    configLoading,
+    config,
     isSubmitting,
     error,
     formErrors,
@@ -19,9 +21,22 @@ export function Schedule({ onNotify }) {
     submitSchedule,
     deleteSchedule,
     refetch,
+    addBatch,
+    removeBatch,
+    addSubBatch,
+    removeSubBatch,
+    addTimeSlot,
+    editTimeSlot,
+    removeTimeSlot,
   } = useSchedules();
 
-  const [activeTab, setActiveTab] = useState(form.content_data ? 'grid' : 'link');
+  const [activeTab, setActiveTab] = useState(
+    form.excel_file || form.schedule_type === 'excel'
+      ? 'excel'
+      : form.onedrive_url
+      ? 'link'
+      : 'grid'
+  );
 
   const handleSubmit = () => {
     submitSchedule((msg) => {
@@ -50,8 +65,9 @@ export function Schedule({ onNotify }) {
 
   // Quick stats
   const totalSchedules = schedules.length;
-  const gridSchedules = schedules.filter((s) => Boolean(s.content_data)).length;
-  const linkSchedules = totalSchedules - gridSchedules;
+  const excelSchedules = schedules.filter((s) => s.schedule_type === 'excel' || Boolean(s.excel_file || s.file_name)).length;
+  const gridSchedules = schedules.filter((s) => Boolean(s.content_data) && s.schedule_type !== 'excel' && !s.excel_file).length;
+  const otherSchedules = totalSchedules - excelSchedules - gridSchedules;
 
   return (
     <div className="schedule-page-container">
@@ -60,7 +76,7 @@ export function Schedule({ onNotify }) {
         <PageIntro
           eyebrow="ACADEMIC PLANNING & TIMETABLES"
           title="Schedule Planner"
-          subtitle="Build native lab timetable grids or schedule OneDrive learning resources for students."
+          subtitle="Build dynamic 7-location lab timetable grids, manage batches & time slots, or upload Excel spreadsheets."
         />
 
         {/* Quick Header Stats */}
@@ -72,25 +88,34 @@ export function Schedule({ onNotify }) {
             </span>
           </div>
 
-          <div className="header-stat-pill" title="Native timetables">
+          <div className="header-stat-pill" title="Native interactive timetables">
             <Grid3X3 size={14} color="#014BAA" aria-hidden="true" />
             <span>
               <b>{gridSchedules}</b> {gridSchedules === 1 ? 'timetable' : 'timetables'}
             </span>
           </div>
 
-          <div className="header-stat-pill" title="OneDrive links">
-            <Link2 size={14} color="#0284C7" aria-hidden="true" />
+          <div className="header-stat-pill" title="Excel spreadsheet timetables">
+            <FileSpreadsheet size={14} color="#059669" aria-hidden="true" />
             <span>
-              <b>{linkSchedules}</b> {linkSchedules === 1 ? 'link' : 'links'}
+              <b>{excelSchedules}</b> {excelSchedules === 1 ? 'Excel sheet' : 'Excel sheets'}
             </span>
           </div>
+
+          {otherSchedules > 0 && (
+            <div className="header-stat-pill" title="External link resources">
+              <Link2 size={14} color="#0284C7" aria-hidden="true" />
+              <span>
+                <b>{otherSchedules}</b> {otherSchedules === 1 ? 'link' : 'links'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {error && <ErrorBanner message={error} onRetry={refetch} />}
 
-      {/* Main Layout Container: adapts smoothly based on activeTab */}
+      {/* Main Layout Container */}
       <div className={activeTab === 'grid' ? 'schedule-grid-layout' : 'two-column schedule-link-layout'}>
         <ScheduleForm
           form={form}
@@ -101,6 +126,14 @@ export function Schedule({ onNotify }) {
           onSubmit={handleSubmit}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          config={config}
+          onAddBatch={addBatch}
+          onRemoveBatch={removeBatch}
+          onAddSubBatch={addSubBatch}
+          onRemoveSubBatch={removeSubBatch}
+          onAddTimeSlot={addTimeSlot}
+          onEditTimeSlot={editTimeSlot}
+          onRemoveTimeSlot={removeTimeSlot}
         />
 
         <ScheduleList
@@ -108,6 +141,7 @@ export function Schedule({ onNotify }) {
           loading={loading}
           onCreateClick={handleFocusTitle}
           onDeleteSchedule={handleDeleteSchedule}
+          config={config}
         />
       </div>
     </div>

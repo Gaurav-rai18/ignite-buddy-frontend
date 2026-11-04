@@ -1,146 +1,262 @@
 # Schedule Feature Documentation
 
 ## Overview
-The **Schedule** feature in the Campus Admin Panel provides administrators with a full‑featured UI to create, preview, and delete schedules. It supports two schedule types:
-1. **Native Timetable Grid** – a custom grid built with day pills, batch selectors (A/B/C), sub‑batch chips and slot counters.
-2. **OneDrive Sharing Link** – a simple external link to a shared OneDrive document.
+The **Schedule** feature in the Campus Admin Panel provides administrators with a full‑featured, dynamic UI and backend architecture to create, preview, and publish academic timetables. It supports two primary schedule publishing options:
+1. **Native Timetable Grid** – an interactive, fully dynamic 7-location lab timetable grid with runtime-configurable batch groups (A, B, C, D…), sub-batches (A1–A5…), and custom time slots.
+2. **Excel File Upload** – a spreadsheet upload workflow supporting `.xlsx` and `.xls` files with automatic structure validation, error handling, interactive timetable preview, and an official downloadable template.
 
-The implementation touches both the **frontend (React/Vite)** and the **backend (Django REST Framework)**.
+The implementation connects a **React/Vite** frontend with a **Django REST Framework** backend and persistent SQLite database.
 
 ---
 
 ## Table of Contents
-1. [Frontend Files](#frontend-files)
-2. [Backend Files](#backend-files)
-3. [Data Flow & Sequence](#data-flow--sequence)
-4. [Database Schema](#database-schema)
-5. [How to Use the Feature](#how-to-use-the-feature)
-6. [Testing](#testing)
-7. [Future Enhancements](#future-enhancements)
+1. [Key Features & Capabilities](#key-features--capabilities)
+2. [Frontend Architecture & Files](#frontend-architecture--files)
+3. [Backend Architecture & Files](#backend-architecture--files)
+4. [Data Flow & Sequence](#data-flow--sequence)
+5. [Database Schema & Models](#database-schema--models)
+6. [API Endpoints](#api-endpoints)
+7. [Step-by-Step Usage Guide](#step-by-step-usage-guide)
+8. [Testing & Verification](#testing--verification)
 
 ---
 
-## Frontend Files
-| Path | Purpose |
-|------|---------|
-| `src/pages/Schedule/Schedule.jsx` | Main page – header stats, tab toggle, renders form, list, and modals. |
-| `src/components/schedule/ScheduleForm.jsx` | Form for creating a schedule. Handles type toggle, date shortcuts, validation, and submission. |
-| `src/components/schedule/ScheduleGridBuilder.jsx` | Native grid builder UI – day pills, batch selector, sub‑batch chips, slot counter, clear‑day action, scroll handling. |
-| `src/components/schedule/SchedulePreviewModal.jsx` | Modal that previews the current grid or the OneDrive link before publishing. |
-| `src/components/schedule/DeleteScheduleDialog.jsx` | Confirmation dialog shown when a user clicks the delete (trash) icon. |
-| `src/components/schedule/ScheduleList.jsx` | Lists existing schedules with preview & delete actions. |
-| `src/services/scheduleService.js` | API wrapper – `createSchedule`, `fetchSchedules`, `deleteSchedule`. |
-| `src/hooks/useSchedules.js` | Custom hook that fetches schedules and provides `create`, `delete`, and `refresh` callbacks to components. |
-| `src/utils/validation.js` | Added whitelist validation for the `audience` field (`VALID_AUDIENCES`). |
-| `src/constants/index.js` | Exported `VALID_AUDIENCES` constant used by validation and UI. |
-| `src/styles.css` | Schedule‑specific CSS (header stats, tab toggle, grid builder layout, responsive breakpoints, overflow handling). |
-| `src/test/components.test.jsx` | Updated component tests to cover the new UI (preview modal, delete dialog). |
-| `src/test/validation.test.js` | Tests for the audience whitelist validation. |
-| `src/test/authAndError.test.js` | Tests for `authService` login fallback (unchanged but still passes). |
+## Key Features & Capabilities
+
+### 1. Seven Working Locations
+The schedule grid displays seven distinct locations in strict order:
+1. **Lab 1** – Hardware (`#014BAA`)
+2. **Lab 2** – Software (`#0284C7`)
+3. **Lab 3** – Data & AI (`#7C3AED`)
+4. **Lab 4** – Cloud Ops (`#059669`)
+5. **Work Area** – Dedicated project work zone (`#D97706`)
+6. **TR1** – Training Room 1 (`#EC4899`)
+7. **TR2** – Training Room 2 (`#8B5CF6`)
+
+> [!NOTE]
+> The legacy *Incubator* column is completely removed.
+
+### 2. Five Working Days (Mon–Fri)
+- Timetable planning strictly encompasses **Monday through Friday**.
+- Saturday and Sunday are permanently removed from the UI and rejected by the backend validation.
+- Monday is selected by default on load.
+
+### 3. Dynamic Batch & Sub-Batch Management
+- Administrators can click **`+ Add Batch`** in the grid header to create new batch groups at runtime (e.g. Batch D, Batch E).
+- Each batch group has an **`+ Add Sub-Batch`** option (e.g., A5, B5, D1).
+- Batches and sub-batches are stored in the database and immediately appear across all 7 lab locations.
+- Administrators can delete batches or sub-batches with confirmation dialogs.
+- Duplicate names and codes are automatically prevented.
+
+### 4. Dynamic Time Slot Configuration
+- Administrators can click **`+ Add Time Slot`** to define start and end times in 12-hour AM/PM format (e.g. `9:00 AM – 11:00 AM`).
+- Supports adding, editing, and deleting time slots.
+- Automatic overlap detection prevents scheduling conflicting time ranges.
+- Changes update the grid timetable rows instantly and persist in the database.
+
+### 5. Excel File Upload & Parser
+- Administrators can drag-and-drop or browse `.xlsx` or `.xls` spreadsheets.
+- Built-in validation checks for required column headers:
+  - `Day`, `Start Time`, `End Time`, `Lab / Location`, `Topic / Subject`, `Batch`, `Sub-Batch`.
+- Non-working days (Saturday, Sunday) or invalid days trigger friendly error messages.
+- Displays an interactive **Timetable Preview** table before saving.
+- Provides a one-click **Download Template (.xlsx)** button to obtain a pre-formatted spreadsheet matching the current locations and batches.
+
+### 6. Automated Publishing Workflow
+- Preserves the publish date and time scheduler with quick shortcuts (**Today**, **Tomorrow**, **Next Week**).
+- Both Native Grid and Excel uploads follow the exact same publishing workflow.
 
 ---
 
-## Backend Files (Django)
+## Frontend Architecture & Files
+
 | Path | Purpose |
 |------|---------|
-| `backend/schedule/models.py` | `Schedule` model – fields: `title`, `message`, `audience`, `type` (`grid`/`link`), `grid_data` (JSON), `link_url`, `start_date`, `end_date`, `created_at`, `updated_at`. |
-| `backend/schedule/serializers.py` | `ScheduleSerializer` – validates required fields, enforces audience whitelist (`VALID_AUDIENCES`). |
-| `backend/schedule/views.py` | `ScheduleViewSet` – provides `list`, `create`, `retrieve`, `update`, `destroy` endpoints. |
-| `backend/schedule/urls.py` | Router registration (`/api/schedules/`). |
-| `backend/settings.py` (part) | Added `VALID_AUDIENCES` to settings for shared validation. |
+| `src/pages/Schedule/Schedule.jsx` | Main Schedule page layout with header stats, tabs, and layout management. |
+| `src/components/schedule/ScheduleForm.jsx` | Segmented toggle between **Native Timetable Grid** and **Excel File Upload**, form submission, and publishing date/time controls. |
+| `src/components/schedule/ScheduleGridBuilder.jsx` | Interactive 7-location timetable grid with day pills, dynamic batch chips, slot counter, clear-day action, and modals. |
+| `src/components/schedule/BatchManagerModal.jsx` | Modal dialog for creating and deleting dynamic batch groups and sub-batches. |
+| `src/components/schedule/TimeSlotManagerModal.jsx` | Modal dialog for adding, editing, and removing time slots with overlap validation. |
+| `src/components/schedule/ExcelUpload.jsx` | Drag-and-drop file upload zone, file status card, template downloader, and timetable preview table. |
+| `src/components/schedule/SchedulePreviewModal.jsx` | Full-screen timetable preview dialog for viewing native grids or uploaded spreadsheets. |
+| `src/components/schedule/DeleteScheduleDialog.jsx` | Safe confirmation modal when deleting an existing schedule item. |
+| `src/components/schedule/ScheduleList.jsx` | Upcoming schedule cards with badges, preview button, and delete action. |
+| `src/hooks/useSchedules.js` | Custom React hook managing schedule lists, dynamic configuration, batches, time slots, and Excel parsing. |
+| `src/services/scheduleService.js` | API client service for schedule endpoints, config, CRUD, and file parsing. |
+| `src/utils/validation.js` | Time slot overlap validator, time string parser, schedule form validator, and URL checks. |
+| `src/constants/index.js` | Default locations (7), weekdays (5), time slots (4), batch groups, and validation limits. |
+| `src/styles.css` | Schedule grid styles, responsive horizontal scroll, batch colors, dropzone, and modal styles. |
+| `public/templates/ScheduleTemplate.xlsx` | Static starter Excel template for client-side download fallback. |
 
-The backend already exposed a `DELETE /api/schedules/<id>/` endpoint, which the new frontend wrapper consumes.
+---
+
+## Backend Architecture & Files (Django)
+
+| Path | Purpose |
+|------|---------|
+| `backend/core/models.py` | Models for `ScheduleLocation`, `ScheduleBatch`, `ScheduleSubBatch`, `ScheduleTimeSlot`, `ScheduleWeekDay`, and `ScheduledLink`. |
+| `backend/core/excel_utils.py` | OpenPyXL utility for dynamically generating styled Excel templates and parsing uploaded timetable spreadsheets. |
+| `backend/core/serializers.py` | DRF serializers for locations, batches, sub-batches, time slots, weekdays, and scheduled links. |
+| `backend/core/views.py` | ViewSets and endpoints: `schedule_config_view`, `schedule_excel_template_view`, `schedule_parse_excel_view`, and `ScheduledLinkViewSet`. |
+| `backend/core/urls.py` | URL routing for schedule config, template download, parsing, and REST routers. |
+| `backend/core/migrations/0003_...` | Schema migration adding dynamic schedule tables and fields to `ScheduledLink`. |
+| `backend/core/migrations/0004_...` | Data migration seeding default locations (7), batches (A, B, C), weekdays (5), and time slots (4). |
+| `backend/core/tests.py` | Automated Django unit tests covering schedule config, batch creation, timeslot validation, and Excel parsing. |
 
 ---
 
 ## Data Flow & Sequence
+
 ```mermaid
-graph TD
-    A[User clicks "Create Schedule"] --> B[ScheduleForm UI]
-    B --> C{Schedule Type?}
-    C -->|Grid| D[ScheduleGridBuilder]
-    C -->|Link| E[Enter OneDrive URL]
-    D --> F[User fills grid]
-    E --> F[User enters link]
-    F --> G[Click "Preview"]
-    G --> H[SchedulePreviewModal shows data]
-    H --> I[User confirms]
-    I --> J[scheduleService.createSchedule]
-    J --> K[POST /api/schedules/]
-    K --> L[Backend creates Schedule record]
-    L --> M[Response with new schedule ID]
-    M --> N[useSchedules.refresh -> fetch list]
-    N --> O[ScheduleList re‑renders]
-    O --> P[User clicks trash icon]
-    P --> Q[DeleteScheduleDialog opens]
-    Q --> R[User confirms delete]
-    R --> S[scheduleService.deleteSchedule]
-    S --> T[DELETE /api/schedules/<id>/]
-    T --> U[Backend deletes record]
-    U --> V[useSchedules.refresh -> fetch list]
-    V --> W[ScheduleList updates]
+sequenceDiagram
+    autonumber
+    actor Admin as Administrator
+    participant UI as React Schedule UI
+    participant Service as scheduleService / API Client
+    participant API as Django REST Backend
+    participant Parser as openpyxl Parser
+    participant DB as SQLite Database
+
+    Admin->>UI: Opens /schedule
+    UI->>Service: getConfig()
+    Service->>API: GET /api/schedule-config/
+    API->>DB: Query locations, batches, weekdays, timeslots
+    DB-->>API: Return records
+    API-->>UI: Config JSON payload
+    UI-->>Admin: Renders 7 columns, 5 weekdays, dynamic batch chips
+
+    alt Native Timetable Grid Creation
+        Admin->>UI: Adds topic & selects batches in grid
+        Admin->>UI: Selects Publish Date & Time
+        Admin->>UI: Clicks "Save schedule grid"
+        UI->>Service: createSchedule({ title, schedule_type: 'grid', content_data, publish_at })
+        Service->>API: POST /api/schedules/
+        API->>DB: Save ScheduledLink record
+        DB-->>API: Saved instance
+        API-->>UI: 201 Created
+        UI-->>Admin: Schedule card displayed in Upcoming list
+    else Excel Spreadsheet Upload
+        Admin->>UI: Selects "Excel File Upload" tab
+        Admin->>UI: Drops or selects .xlsx file
+        UI->>Service: parseExcel(file)
+        Service->>API: POST /api/schedules/parse-excel/ (multipart FormData)
+        API->>Parser: parse_schedule_excel(file.read())
+        Parser-->>API: Parsed grid data & verified days/slots
+        API-->>UI: { success: true, total_rows_parsed: 9, grid: {...} }
+        UI-->>Admin: Displays Interactive Timetable Preview
+        Admin->>UI: Sets Publish Date & Clicks "Publish timetable"
+        UI->>Service: createSchedule(FormData with excel_file & content_data)
+        Service->>API: POST /api/schedules/
+        API->>DB: Save ScheduledLink with file & JSON
+        API-->>UI: 201 Created
+        UI-->>Admin: Schedule published & visible in list
+    end
 ```
 
-### Step‑by‑Step Description
-1. **Form Interaction** – `ScheduleForm` renders the type toggle and date shortcuts. Selecting *Native Timetable Grid* displays `ScheduleGridBuilder`; selecting *OneDrive Link* shows a simple text field.
-2. **Building the Grid** – Users add days, select batch presets (A/B/C) and optionally choose sub‑batch chips. The component keeps a local `gridData` state.
-3. **Preview** – Clicking *Preview* opens `SchedulePreviewModal`. It renders a read‑only copy of the grid (or the link) so the user can verify before publishing.
-4. **Create** – On confirmation, `scheduleService.createSchedule` sends a `POST` request with the payload. The backend validates the audience against `VALID_AUDIENCES` and stores the JSON grid (or link).
-5. **List & Delete** – `useSchedules` fetches all schedules and supplies a `deleteSchedule` callback. The list shows a *preview* icon and a *trash* icon. Deleting triggers `DeleteScheduleDialog`; on confirm the service calls the backend `DELETE` endpoint and refreshes the list.
-
 ---
 
-## Database Schema
-```sql
-CREATE TABLE schedule_schedule (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    audience VARCHAR(50) NOT NULL,                -- must be in VALID_AUDIENCES
-    type VARCHAR(10) NOT NULL CHECK (type IN ('grid','link')),
-    grid_data JSONB,                               -- null if type='link'
-    link_url VARCHAR(500),                         -- null if type='grid'
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+## Database Schema & Models
+
+### 1. `ScheduleLocation`
+```python
+class ScheduleLocation(models.Model):
+    name = models.CharField(max_length=100, unique=True) # Lab 1..4, Work Area, TR1, TR2
+    badge = models.CharField(max_length=100, blank=True, default='') # Hardware, Software, etc.
+    color = models.CharField(max_length=30, blank=True, default='#014BAA')
+    order = models.IntegerField(default=0)
 ```
-*The Django model mirrors the table above. The `grid_data` JSON stores an array of day objects, each containing batch‑A/B/C arrays of sub‑batch IDs and slot counts.*
+
+### 2. `ScheduleBatch` & `ScheduleSubBatch`
+```python
+class ScheduleBatch(models.Model):
+    name = models.CharField(max_length=50, unique=True)  # e.g., "Batch A", "Batch D"
+    code = models.CharField(max_length=10, unique=True)  # e.g., "A", "D"
+    order = models.IntegerField(default=0)
+
+class ScheduleSubBatch(models.Model):
+    batch = models.ForeignKey(ScheduleBatch, related_name='subbatches', on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)               # e.g., "A1", "A5"
+    code = models.CharField(max_length=20)               # e.g., "a1", "a5"
+    order = models.IntegerField(default=0)
+```
+
+### 3. `ScheduleTimeSlot`
+```python
+class ScheduleTimeSlot(models.Model):
+    start_time = models.CharField(max_length=20)         # e.g., "9:00 AM"
+    end_time = models.CharField(max_length=20)           # e.g., "11:00 AM"
+    label = models.CharField(max_length=50, blank=True)  # e.g., "9:00 AM – 11:00 AM"
+    order = models.IntegerField(default=0)
+```
+
+### 4. `ScheduledLink` (Extended)
+```python
+class ScheduledLink(models.Model):
+    title = models.CharField(max_length=160)
+    onedrive_url = models.URLField(max_length=1000, blank=True, null=True)
+    content_data = models.TextField(blank=True, null=True)   # JSON timetable
+    schedule_type = models.CharField(max_length=20, default='grid') # 'grid' | 'excel' | 'link'
+    excel_file = models.FileField(upload_to='schedules/excels/', blank=True, null=True)
+    file_name = models.CharField(max_length=255, blank=True, null=True)
+    file_size = models.IntegerField(blank=True, null=True)
+    publish_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+```
 
 ---
 
-## How to Use the Feature
-1. Navigate to **/schedule** in the admin UI.
-2. Toggle between **Native Timetable Grid** and **OneDrive Sharing Link**.
-3. For the grid:
-   - Click a day pill to edit that day.
-   - Choose a batch preset (A/B/C) or toggle sub‑batch chips.
-   - The slot counter updates automatically.
-   - Use the **Clear Day** button to reset a day.
-4. Click **Preview** to open the modal and verify the layout.
-5. Press **Publish** to save the schedule.
-6. Existing schedules appear in the list; use the eye icon to preview again or the trash icon to delete.
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/schedule-config/` | Returns combined locations, batches, sub-batches, weekdays, and time slots. |
+| `GET` | `/api/schedule-template/` | Dynamically generates and downloads official Excel timetable template (.xlsx). |
+| `POST` | `/api/schedules/parse-excel/` | Validates uploaded Excel file and returns extracted slots & days. |
+| `GET` | `/api/schedules/` | Lists all published and upcoming schedules. |
+| `POST` | `/api/schedules/` | Creates a schedule item (supports JSON payload or multipart FormData). |
+| `DELETE` | `/api/schedules/{id}/` | Deletes a scheduled timetable item. |
+| `POST` | `/api/schedule-batches/` | Creates a new dynamic batch group with auto-generated sub-batches. |
+| `DELETE` | `/api/schedule-batches/{id}/` | Deletes a batch group and its sub-batches. |
+| `POST` | `/api/schedule-subbatches/` | Creates a new sub-batch in a batch group. |
+| `DELETE` | `/api/schedule-subbatches/{id}/` | Deletes a sub-batch. |
+| `POST` | `/api/schedule-timeslots/` | Creates a new time slot with overlap validation. |
+| `PATCH` | `/api/schedule-timeslots/{id}/` | Updates an existing time slot. |
+| `DELETE` | `/api/schedule-timeslots/{id}/` | Deletes a time slot. |
 
 ---
 
-## Testing
-- **Unit tests** (`npm test`) cover:
-  - Validation whitelist (`validation.test.js`).
-  - Auth service login fallback.
-  - Component rendering and interaction (`components.test.jsx`).
-- All **34 tests pass**.
-- UI can be manually tested by running `npm run dev` and interacting at `http://localhost:5173/schedule`.
+## Step-by-Step Usage Guide
+
+### Creating a Native Timetable
+1. Navigate to **Schedule** in the sidebar.
+2. Ensure the **Native Timetable Grid** tab is active.
+3. Use the day pills (Monday to Friday) to pick a working day.
+4. (Optional) Click **`+ Add Batch`** to introduce a new batch group (e.g. Batch D) or add a sub-batch (e.g. A5).
+5. (Optional) Click **`+ Add Time Slot`** to adjust or append custom periods.
+6. In any location column (Lab 1–4, Work Area, TR1, TR2):
+   - Type a topic or subject.
+   - Click batch quick actions (`+ All A`, `+ All B`, `+ All`) or toggle specific sub-batch chips.
+7. Set the **Publish Date** and **Publish Time** (use Today / Tomorrow / Next Week shortcuts).
+8. Click **Save schedule grid**.
+
+### Uploading an Excel Timetable
+1. Select the **Excel File Upload** tab.
+2. Click **Download Template (.xlsx)** if you need the official template.
+3. Drag and drop your `.xlsx` or `.xls` file into the upload zone (or click **Browse Files**).
+4. The backend will parse and validate the file.
+5. Review the extracted slots in the **Timetable Preview** table.
+6. Provide a schedule title and choose the publish date and time.
+7. Click **Publish timetable**.
 
 ---
 
-## Future Enhancements
-- Add optimistic UI updates for create/delete actions.
-- Persist the active tab in the URL query string.
-- Write dedicated Vitest tests for `ScheduleGridBuilder` interactions (drag‑drop, sub‑batch selection).
-- Introduce pagination / infinite scroll for large schedule lists.
-- Export / import schedule JSON for backup.
+## Testing & Verification
+
+- **Frontend Vitest Suite:** 5 test files, **46 tests passed** (100% green).
+  - Command: `npm --prefix frontend test`
+- **Backend Django Suite:** 5 test cases covering config, dynamic models, validation, and Excel parsing.
+  - Command: `python backend/manage.py test core`
+- **Production Build:** `npm --prefix frontend run build` completed successfully.
 
 ---
-
-*Documentation generated by Antigravity on 2026‑11‑04.*
+*Documentation updated for Ignite Buddy Schedule Feature on 2026-11-04.*

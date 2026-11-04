@@ -5,6 +5,7 @@ import {
   Clock3,
   ExternalLink,
   Grid3X3,
+  FileSpreadsheet,
   Eye,
   Trash2,
   Calendar,
@@ -20,6 +21,7 @@ export function ScheduleList({
   loading = false,
   onCreateClick,
   onDeleteSchedule,
+  config,
 }) {
   const [previewItem, setPreviewItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -42,7 +44,7 @@ export function ScheduleList({
       <div className="panel-heading">
         <div>
           <h3>Upcoming schedule</h3>
-          <p>Saved resources and their publish times</p>
+          <p>Saved timetables and their publish times</p>
         </div>
         <span className="count-badge" aria-label={`${schedules.length} schedules`}>
           {schedules.length}
@@ -65,19 +67,23 @@ export function ScheduleList({
               console.error('Failed to parse schedule content_data', e);
             }
 
-            const isGrid = Boolean(contentData);
+            const isExcel = item.schedule_type === 'excel' || Boolean(item.excel_file || item.file_name);
+            const isGrid = Boolean(contentData) && !isExcel;
             const isSafeUrl = isValidHttpsUrl(item.onedrive_url);
             const day = contentData?.day || 'Weekly';
 
             return (
               <article className="list-entry schedule-card-item" key={item.id}>
                 <div className="entry-top">
-                  <span className={`entry-icon ${isGrid ? 'grid-icon' : 'link-icon'}`} aria-hidden="true">
-                    {isGrid ? <Grid3X3 size={15} /> : <Link2 size={15} />}
+                  <span
+                    className={`entry-icon ${isExcel ? 'excel-icon' : isGrid ? 'grid-icon' : 'link-icon'}`}
+                    aria-hidden="true"
+                  >
+                    {isExcel ? <FileSpreadsheet size={15} /> : isGrid ? <Grid3X3 size={15} /> : <Link2 size={15} />}
                   </span>
 
                   <span className="schedule-type-badge">
-                    {isGrid ? `${day} Grid` : 'OneDrive Resource'}
+                    {isExcel ? 'Excel Schedule' : isGrid ? `${day} Grid` : 'OneDrive Resource'}
                   </span>
 
                   <span className="scheduled-tag">
@@ -88,15 +94,15 @@ export function ScheduleList({
                 <h4 className="schedule-item-title">{item.title}</h4>
 
                 <div className="schedule-item-content">
-                  {isGrid ? (
+                  {contentData ? (
                     <button
                       type="button"
                       className="view-grid-btn"
                       onClick={() => setPreviewItem(item)}
-                      title="Preview full timetable grid"
+                      title="Preview full timetable schedule"
                     >
                       <Eye size={13} aria-hidden="true" />
-                      <span>View Timetable Grid</span>
+                      <span>{isExcel ? 'View Excel Timetable' : 'View Timetable Grid'}</span>
                     </button>
                   ) : isSafeUrl ? (
                     <a
@@ -109,7 +115,7 @@ export function ScheduleList({
                     </a>
                   ) : (
                     <span className="external-link" style={{ opacity: 0.6 }}>
-                      (Invalid link URL)
+                      (No content preview available)
                     </span>
                   )}
                 </div>
@@ -140,7 +146,7 @@ export function ScheduleList({
         <EmptyState
           icon={CalendarClock}
           title="No scheduled items yet"
-          text="Create a schedule to publish a grid or OneDrive resource at a specific time."
+          text="Create a schedule to publish a native timetable grid or upload an Excel timetable."
           action={onCreateClick ? 'Create schedule' : undefined}
           onClick={onCreateClick}
         />
@@ -151,6 +157,7 @@ export function ScheduleList({
         isOpen={Boolean(previewItem)}
         onClose={() => setPreviewItem(null)}
         schedule={previewItem}
+        config={config}
       />
 
       {/* Delete Confirmation Dialog */}

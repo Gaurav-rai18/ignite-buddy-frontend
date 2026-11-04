@@ -3,6 +3,7 @@ import {
   RECIPIENT_MODES,
   DEFAULT_RECIPIENT_MODE,
   VALIDATION_LIMITS,
+  VALID_AUDIENCES,
 } from '../constants';
 
 /**
@@ -54,12 +55,12 @@ export function validateBroadcastForm(data = {}) {
       errors.recipients = 'Select at least one recipient.';
     }
   } else {
-    // "All users" mode. In this mode, we check that audience is provided and valid.
+    // "All users" mode. Verify audience is in VALID_AUDIENCES.
     const audience = (data.audience || '').trim();
-    const VALID_AUDIENCES = ['All students', 'All faculty', 'All staff', 'All users', 'All campus members'];
+    const allowed = VALID_AUDIENCES || ['All students', 'All faculty', 'All staff', 'All users', 'All campus members'];
     if (!audience) {
       errors.audience = 'Audience is required.';
-    } else if (!VALID_AUDIENCES.includes(audience)) {
+    } else if (!allowed.includes(audience)) {
       errors.audience = 'Invalid audience selection.';
     }
   }
@@ -78,6 +79,7 @@ export function validateScheduleForm(data = {}) {
   const title = (data.title || '').trim();
   const onedriveUrl = (data.onedrive_url || '').trim();
   const contentData = data.content_data;
+  const excelFile = data.excel_file;
 
   if (!title) {
     errors.title = 'Schedule title is required.';
@@ -85,8 +87,8 @@ export function validateScheduleForm(data = {}) {
     errors.title = `Title must not exceed ${VALIDATION_LIMITS.SCHEDULE_TITLE_MAX} characters.`;
   }
 
-  if (!onedriveUrl && !contentData) {
-    errors.onedrive_url = 'OneDrive link or Schedule Grid data is required.';
+  if (!onedriveUrl && !contentData && !excelFile) {
+    errors.onedrive_url = 'Schedule Grid data or Excel file is required.';
   } else if (onedriveUrl && !isValidHttpsUrl(onedriveUrl)) {
     errors.onedrive_url = 'Please provide a valid HTTPS URL (e.g. https://1drv.ms/...).';
   }
@@ -110,6 +112,59 @@ export function validateScheduleForm(data = {}) {
     const dateObj = new Date(publishAt);
     if (Number.isNaN(dateObj.getTime())) {
       errors.publish_at = 'Invalid publish date and time.';
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+/**
+ * Convert time string like '9:00 AM' or '09:00' to minutes from midnight
+ */
+export function timeStringToMinutes(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  const cleaned = timeStr.trim().toUpperCase();
+  const isPM = cleaned.includes('PM');
+  const isAM = cleaned.includes('AM');
+  const match = cleaned.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  if (isPM && hours < 12) hours += 12;
+  if (isAM && hours === 12) hours = 0;
+  return hours * 60 + minutes;
+}
+
+/**
+ * Validates a new or updated time slot
+ */
+export function validateTimeSlot(startTime, endTime, existingSlots = [], currentId = null) {
+  const errors = {};
+  if (!startTime) errors.startTime = 'Start time is required.';
+  if (!endTime) errors.endTime = 'End time is required.';
+
+  const startMin = timeStringToMinutes(startTime);
+  const endMin = timeStringToMinutes(endTime);
+
+  if (startMin !== null && endMin !== null) {
+    if (endMin <= startMin) {
+      errors.endTime = 'End time must be later than start time.';
+    } else {
+      // Check for overlap
+      const hasOverlap = existingSlots.some((slot) => {
+        if (currentId && slot.id === currentId) return false;
+        const sMin = timeStringToMinutes(slot.start_time);
+        const eMin = timeStringToMinutes(slot.end_time);
+        if (sMin === null || eMin === null) return false;
+        // Overlap condition: start < otherEnd && end > otherStart
+        return startMin < eMin && endMin > sMin;
+      });
+      if (hasOverlap) {
+        errors.overlap = 'This time range overlaps with an existing time slot.';
+      }
     }
   }
 

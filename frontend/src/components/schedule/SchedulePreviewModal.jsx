@@ -1,9 +1,24 @@
-import React, { useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, Grid3X3, ExternalLink, BookOpen, Users } from 'lucide-react';
-import { SCHEDULE_TIME_SLOTS, SCHEDULE_LOCATIONS } from '../../constants';
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  Calendar,
+  Clock,
+  MapPin,
+  Grid3X3,
+  ExternalLink,
+  BookOpen,
+  Users,
+  FileSpreadsheet,
+} from 'lucide-react';
+import {
+  DEFAULT_SCHEDULE_LOCATIONS,
+  DEFAULT_SCHEDULE_TIME_SLOTS,
+} from '../../constants';
 import { formatDate } from '../../utils/date';
 
-export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
+export function SchedulePreviewModal({ isOpen, onClose, schedule, config }) {
+  const [activeDay, setActiveDay] = useState('');
+
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
@@ -28,14 +43,39 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
   }
 
   const isGrid = Boolean(contentData);
-  const grid = contentData?.grid || {};
-  const day = contentData?.day || 'Scheduled Day';
+  const isExcel = schedule.schedule_type === 'excel' || Boolean(schedule.excel_file || schedule.file_name);
+  const isLink = Boolean(schedule.onedrive_url) && !isGrid && !isExcel;
+
+  // Days available in contentData
+  const daysData = contentData?.days_data || {};
+  const daysKeys = Object.keys(daysData);
+  const defaultDay = contentData?.day || (daysKeys.length > 0 ? daysKeys[0] : 'Monday');
+  const currentDay = activeDay || defaultDay;
+
+  const currentGrid = daysData[currentDay] || contentData?.grid || {};
+
+  // Dynamic locations from config or discovered in grid
+  const locations =
+    config?.locations?.length > 0
+      ? config.locations.map((l) => (typeof l === 'string' ? l : l.name))
+      : DEFAULT_SCHEDULE_LOCATIONS;
+
+  // Dynamic time slots
+  const gridTimeSlots = Object.keys(currentGrid);
+  const timeSlots =
+    gridTimeSlots.length > 0
+      ? gridTimeSlots
+      : config?.time_slots?.length > 0
+      ? config.time_slots.map((t) => (typeof t === 'string' ? t : t.label || `${t.start_time} – ${t.end_time}`))
+      : DEFAULT_SCHEDULE_TIME_SLOTS;
 
   const getBatchClass = (sb) => {
     const char = sb.charAt(0).toLowerCase();
     if (char === 'a') return 'batch-a';
     if (char === 'b') return 'batch-b';
     if (char === 'c') return 'batch-c';
+    if (char === 'd') return 'batch-d';
+    if (char === 'e') return 'batch-e';
     return '';
   };
 
@@ -49,7 +89,7 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
     >
       <div
         className="modal-card schedule-preview-modal"
-        style={{ maxWidth: isGrid ? '920px' : '520px', width: '95%' }}
+        style={{ maxWidth: isGrid ? '1060px' : '540px', width: '96%' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
@@ -67,15 +107,19 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
               }}
               aria-hidden="true"
             >
-              {isGrid ? <Grid3X3 size={18} /> : <ExternalLink size={18} />}
+              {isExcel ? <FileSpreadsheet size={18} /> : isGrid ? <Grid3X3 size={18} /> : <ExternalLink size={18} />}
             </span>
             <div>
               <h3 id="schedule-preview-title" style={{ margin: 0, fontSize: '15px' }}>
                 {schedule.title}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                {isGrid ? `${day} Native Timetable` : 'OneDrive Resource'} &bull; Publish on{' '}
-                {formatDate(schedule.publish_at)}
+                {isExcel
+                  ? `Excel Spreadsheet Schedule (${schedule.file_name || 'Uploaded timetable'})`
+                  : isGrid
+                  ? `${currentDay} Timetable Grid (${locations.length} Locations)`
+                  : 'OneDrive Resource'}{' '}
+                &bull; Publish: {formatDate(schedule.publish_at)}
               </p>
             </div>
           </div>
@@ -89,41 +133,101 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
           </button>
         </div>
 
+        {/* Day tabs if schedule has multiple days */}
+        {daysKeys.length > 1 && (
+          <div style={{ display: 'flex', gap: '6px', margin: '14px 0 0', overflowX: 'auto' }}>
+            {daysKeys.map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`preview-day-pill ${d === currentDay ? 'active' : ''}`}
+                onClick={() => setActiveDay(d)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--color-border)',
+                  background: d === currentDay ? '#014BAA' : '#FFF',
+                  color: d === currentDay ? '#FFF' : 'var(--color-text-primary)',
+                  fontSize: '11.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="schedule-preview-body" style={{ marginTop: '16px' }}>
           {isGrid ? (
-            <div className="preview-grid-wrapper" style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <table className="schedule-builder-table schedule-preview-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+            <div
+              className="preview-grid-wrapper"
+              style={{
+                overflowX: 'auto',
+                borderRadius: '8px',
+                border: '1px solid var(--color-border)',
+                maxHeight: '440px',
+              }}
+            >
+              <table
+                className="schedule-builder-table schedule-preview-table"
+                style={{ width: '100%', borderCollapse: 'collapse', minWidth: '850px' }}
+              >
                 <thead>
                   <tr>
-                    <th style={{ width: '110px' }}>Time / Lab</th>
-                    {SCHEDULE_LOCATIONS.map((loc) => (
+                    <th style={{ width: '130px' }}>Time / Location</th>
+                    {locations.map((loc) => (
                       <th key={loc}>{loc}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {SCHEDULE_TIME_SLOTS.map((time) => (
+                  {timeSlots.map((time) => (
                     <tr key={time}>
                       <td className="time-cell">
                         <Clock size={13} aria-hidden="true" />
                         <span>{time}</span>
                       </td>
-                      {SCHEDULE_LOCATIONS.map((loc) => {
-                        const cell = grid[time]?.[loc] || { topic: '', subbatches: [] };
+                      {locations.map((loc) => {
+                        const cell = currentGrid[time]?.[loc] || { topic: '', subbatches: [] };
                         const hasTopic = Boolean(cell.topic?.trim());
                         const hasBatches = Array.isArray(cell.subbatches) && cell.subbatches.length > 0;
                         const isEmpty = !hasTopic && !hasBatches;
 
                         return (
-                          <td key={loc} style={{ padding: '8px', verticalAlign: 'top', background: isEmpty ? 'var(--color-white)' : 'var(--color-primary-light)' }}>
+                          <td
+                            key={loc}
+                            style={{
+                              padding: '8px',
+                              verticalAlign: 'top',
+                              background: isEmpty ? 'var(--color-white)' : 'var(--color-primary-light)',
+                            }}
+                          >
                             {isEmpty ? (
-                              <div style={{ color: 'var(--color-text-secondary)', fontSize: '10.5px', fontStyle: 'italic', padding: '6px 4px' }}>
+                              <div
+                                style={{
+                                  color: 'var(--color-text-secondary)',
+                                  fontSize: '10.5px',
+                                  fontStyle: 'italic',
+                                  padding: '6px 4px',
+                                }}
+                              >
                                 Unassigned
                               </div>
                             ) : (
                               <div style={{ display: 'grid', gap: '6px' }}>
                                 {hasTopic && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700', fontSize: '11.5px', color: 'var(--color-text-primary)' }}>
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      fontWeight: '700',
+                                      fontSize: '11.5px',
+                                      color: 'var(--color-text-primary)',
+                                    }}
+                                  >
                                     <BookOpen size={12} color="var(--color-primary)" />
                                     <span>{cell.topic}</span>
                                   </div>
@@ -151,8 +255,17 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div style={{ padding: '16px', background: 'var(--color-bg-cream)', borderRadius: '8px', border: '1px solid var(--color-border)', display: 'grid', gap: '12px' }}>
+          ) : isLink ? (
+            <div
+              style={{
+                padding: '16px',
+                background: 'var(--color-bg-cream)',
+                borderRadius: '8px',
+                border: '1px solid var(--color-border)',
+                display: 'grid',
+                gap: '12px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ExternalLink size={16} color="var(--color-primary)" />
                 <span style={{ fontSize: '12px', fontWeight: '600' }}>OneDrive Resource URL:</span>
@@ -173,6 +286,17 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
                 {schedule.onedrive_url}
               </a>
             </div>
+          ) : (
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: 'var(--color-text-secondary)',
+                fontSize: '12px',
+              }}
+            >
+              No content data available for this schedule item.
+            </div>
           )}
         </div>
 
@@ -185,4 +309,3 @@ export function SchedulePreviewModal({ isOpen, onClose, schedule }) {
     </div>
   );
 }
-

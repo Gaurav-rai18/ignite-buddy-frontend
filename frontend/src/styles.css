@@ -3797,3 +3797,318 @@ nav {
 
 
 
+
+
+/* ==========================================================================
+   DYNAMIC BATCHES, DYNAMIC TIME SLOTS & EXCEL UPLOAD ENHANCEMENTS
+   ========================================================================== */
+
+/* Top Builder Action Tools */
+.config-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.config-tool-btn:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+/* Dynamic Batch Colors & Legend */
+.legend-item.batch-d .legend-dot { background: #059669; }
+.legend-item.batch-e .legend-dot { background: #D97706; }
+.legend-item.batch-custom .legend-dot { background: #4F46E5; }
+
+.batch-preset-btn.batch-d { color: #059669; border-color: rgba(5, 150, 105, 0.35); }
+.batch-preset-btn.batch-d.active { background: #059669; color: #fff; }
+.batch-preset-btn.batch-e { color: #D97706; border-color: rgba(217, 119, 6, 0.35); }
+.batch-preset-btn.batch-e.active { background: #D97706; color: #fff; }
+.batch-preset-btn.batch-custom { color: #4F46E5; border-color: rgba(79, 70, 229, 0.35); }
+.batch-preset-btn.batch-custom.active { background: #4F46E5; color: #fff; }
+
+.batch-preset-btn.select-all-btn {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  font-weight: 600;
+}
+.batch-preset-btn.select-all-btn.active {
+  background: #334155;
+  color: #fff;
+  border-color: #334155;
+}
+
+.sb-chip.batch-d.active { background: #059669; border-color: #059669; color: #fff; }
+.sb-chip.batch-e.active { background: #D97706; border-color: #D97706; color: #fff; }
+.sb-chip.batch-custom.active { background: #4F46E5; border-color: #4F46E5; color: #fff; }
+
+/* Seven Location Table Column Sizing */
+.schedule-builder-table {
+  min-width: 1040px;
+}
+.schedule-builder-table th.lab-header-th {
+  min-width: 140px;
+}
+
+/* Excel Upload Interface */
+.excel-upload-container {
+  display: grid;
+  gap: 14px;
+}
+
+.excel-template-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  font-size: 11.5px;
+  color: #166534;
+}
+
+.excel-template-banner .banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.template-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: #16A34A;
+  color: #FFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.template-download-btn:hover {
+  background: #15803D;
+}
+
+.excel-dropzone {
+  border: 2px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  background: #FAFBFD;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.excel-dropzone:hover,
+.excel-dropzone.is-dragging {
+  border-color: var(--color-primary);
+  background: #F0F7FF;
+}
+
+.dropzone-icon-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.dropzone-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.dropzone-sub {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.browse-files-btn {
+  font-size: 11.5px;
+  padding: 6px 14px;
+  margin-top: 4px;
+}
+
+.excel-file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.file-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-type-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  display: grid;
+  place-items: center;
+}
+
+.file-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.file-meta {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-status-badge.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16A34A;
+  font-weight: 700;
+}
+
+.file-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.replace-file-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.replace-file-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  color: #EF4444;
+  cursor: pointer;
+  padding: 4px;
+  display: grid;
+  place-items: center;
+}
+
+.upload-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+
+.upload-alert.error {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+}
+
+.upload-alert.success {
+  background: #F0FDF4;
+  border: 1px solid #86EFAC;
+  color: #166534;
+}
+
+/* Excel Preview Section */
+.excel-preview-section {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #FAFBFD;
+}
+
+.preview-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.preview-heading-row .heading-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.preview-day-tabs {
+  display: flex;
+  gap: 5px;
+}
+
+.preview-day-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #FFF;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.preview-day-pill.active {
+  background: #014BAA;
+  color: #FFF;
+  border-color: #014BAA;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

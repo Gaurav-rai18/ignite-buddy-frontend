@@ -36,12 +36,75 @@ class ScheduledLink(models.Model):
     title = models.CharField(max_length=160)
     onedrive_url = models.URLField(max_length=1000, blank=True, null=True)
     content_data = models.TextField(blank=True, null=True)  # Stores JSON schedule data
+    schedule_type = models.CharField(max_length=20, default='grid')  # 'grid', 'excel', 'link'
+    excel_file = models.FileField(upload_to='schedules/excels/', blank=True, null=True)
+    file_name = models.CharField(max_length=255, blank=True, null=True)
+    file_size = models.IntegerField(blank=True, null=True)
     publish_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         ordering = ['publish_at']
     def __str__(self):
         return self.title
+
+class ScheduleLocation(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    badge = models.CharField(max_length=100, blank=True, default='')
+    color = models.CharField(max_length=30, blank=True, default='#014BAA')
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.name
+
+class ScheduleBatch(models.Model):
+    name = models.CharField(max_length=50, unique=True)  # e.g., "Batch A"
+    code = models.CharField(max_length=10, unique=True)  # e.g., "A"
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.name
+
+class ScheduleSubBatch(models.Model):
+    batch = models.ForeignKey(ScheduleBatch, related_name='subbatches', on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)  # e.g., "A1"
+    code = models.CharField(max_length=20)  # e.g., "a1"
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+        unique_together = ('batch', 'code')
+
+    def __str__(self):
+        return f"{self.batch.code} - {self.name}"
+
+class ScheduleTimeSlot(models.Model):
+    start_time = models.CharField(max_length=20)  # e.g. "09:00 AM"
+    end_time = models.CharField(max_length=20)    # e.g. "11:00 AM"
+    label = models.CharField(max_length=50, blank=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.label or f"{self.start_time} – {self.end_time}"
+
+class ScheduleWeekDay(models.Model):
+    name = models.CharField(max_length=20, unique=True)  # e.g. "Monday"
+    code = models.CharField(max_length=10, unique=True)  # e.g. "mon"
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.name
 
 class SiteSetting(models.Model):
     key = models.CharField(max_length=80, unique=True)

@@ -5,12 +5,14 @@ import {
   Grid3X3,
   Calendar,
   Clock,
+  FileSpreadsheet,
   AlertCircle,
   Sparkles,
 } from 'lucide-react';
 import { Field } from '../ui/Field';
 import { VALIDATION_LIMITS } from '../../constants';
 import { ScheduleGridBuilder } from './ScheduleGridBuilder';
+import { ExcelUpload } from './ExcelUpload';
 
 export function ScheduleForm({
   form,
@@ -21,8 +23,30 @@ export function ScheduleForm({
   onSubmit,
   activeTab: controlledTab,
   onTabChange: setControlledTab,
+  config,
+  onAddBatch,
+  onRemoveBatch,
+  onAddSubBatch,
+  onRemoveSubBatch,
+  onAddTimeSlot,
+  onEditTimeSlot,
+  onRemoveTimeSlot,
+  onExcelSelect,
+  onExcelRemove,
 }) {
-  const [internalTab, setInternalTab] = useState(form.content_data ? 'grid' : 'link');
+  const initialActive = controlledTab !== undefined
+    ? controlledTab
+    : form.schedule_type === 'excel' || form.excel_file
+    ? 'excel'
+    : form.schedule_type === 'grid'
+    ? 'grid'
+    : form.content_data
+    ? 'grid'
+    : form.onedrive_url !== undefined
+    ? 'link'
+    : 'grid';
+
+  const [internalTab, setInternalTab] = useState(initialActive);
 
   const activeTab = controlledTab !== undefined ? controlledTab : internalTab;
 
@@ -32,6 +56,7 @@ export function ScheduleForm({
     } else {
       setInternalTab(tab);
     }
+    onChangeField('schedule_type', tab);
     if (tab === 'grid' && !form.content_data) {
       onChangeField('content_data', { day: 'Monday', grid: {} });
     }
@@ -52,7 +77,11 @@ export function ScheduleForm({
 
   const isFormIncomplete =
     !form.title.trim() ||
-    (activeTab === 'link' ? !form.onedrive_url.trim() : isGridEmpty()) ||
+    (activeTab === 'link'
+      ? !form.onedrive_url.trim()
+      : activeTab === 'excel'
+      ? !form.excel_file && isGridEmpty()
+      : isGridEmpty()) ||
     !form.publish_date ||
     !form.publish_time;
 
@@ -68,13 +97,41 @@ export function ScheduleForm({
     }
   };
 
+  const handleExcelFileSelect = (excelDetails) => {
+    if (onExcelSelect) {
+      onExcelSelect(excelDetails);
+    } else {
+      onChangeField('excel_file', excelDetails.file);
+      onChangeField('excel_file_name', excelDetails.fileName);
+      onChangeField('excel_file_size', excelDetails.fileSize);
+      if (excelDetails.parsedData) {
+        onChangeField('content_data', {
+          day: excelDetails.parsedData.selected_day || 'Monday',
+          grid: excelDetails.parsedData.grid || {},
+          days_data: excelDetails.parsedData.days_data || {},
+        });
+      }
+    }
+  };
+
+  const handleExcelFileRemove = () => {
+    if (onExcelRemove) {
+      onExcelRemove();
+    } else {
+      onChangeField('excel_file', null);
+      onChangeField('excel_file_name', '');
+      onChangeField('excel_file_size', null);
+      onChangeField('content_data', { day: 'Monday', grid: {} });
+    }
+  };
+
   return (
     <section className="panel form-panel schedule-form-panel">
       {/* Panel Heading */}
       <div className="panel-heading">
         <div>
           <h3>Create scheduled item</h3>
-          <p>Choose between building a native lab timetable grid or scheduling a OneDrive resource.</p>
+          <p>Choose between building a native lab timetable grid or uploading an Excel schedule spreadsheet.</p>
         </div>
         <div className="stat-icon warning" aria-hidden="true">
           <CalendarClock size={18} />
@@ -98,14 +155,29 @@ export function ScheduleForm({
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === 'link'}
-          className={`schedule-type-btn ${activeTab === 'link' ? 'active' : ''}`}
-          onClick={() => handleTabChange('link')}
+          aria-selected={activeTab === 'excel'}
+          className={`schedule-type-btn ${activeTab === 'excel' ? 'active' : ''}`}
+          onClick={() => handleTabChange('excel')}
         >
-          <Link2 size={15} aria-hidden="true" />
-          <span className="type-title">OneDrive Sharing Link</span>
-          <span className="type-badge">URL</span>
+          <FileSpreadsheet size={15} aria-hidden="true" />
+          <span className="type-title">Excel File Upload</span>
+          <span className="type-badge">Spreadsheet</span>
         </button>
+
+        {/* Backward compatible hidden/conditional link tab if onedrive_url was passed */}
+        {activeTab === 'link' && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={true}
+            className="schedule-type-btn active"
+            onClick={() => handleTabChange('link')}
+          >
+            <Link2 size={15} aria-hidden="true" />
+            <span className="type-title">OneDrive Sharing Link</span>
+            <span className="type-badge">URL</span>
+          </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="form-layout" noValidate>
@@ -129,7 +201,17 @@ export function ScheduleForm({
         </Field>
 
         {/* Dynamic Content based on Active Tab */}
-        {activeTab === 'link' ? (
+        {activeTab === 'excel' ? (
+          <ExcelUpload
+            file={form.excel_file}
+            fileName={form.excel_file_name}
+            fileSize={form.excel_file_size}
+            parsedData={form.content_data}
+            onFileSelect={handleExcelFileSelect}
+            onFileRemove={handleExcelFileRemove}
+            disabled={isSubmitting}
+          />
+        ) : activeTab === 'link' ? (
           <Field
             label="OneDrive sharing link"
             htmlFor="schedule-url"
@@ -157,13 +239,21 @@ export function ScheduleForm({
                 Schedule Grid Builder
               </label>
               <span className="grid-builder-hint">
-                Plan lab topics and assign sub-batches for each slot
+                Plan lab topics and assign sub-batches across all 7 locations
               </span>
             </div>
             <ScheduleGridBuilder
               value={form.content_data}
               onChange={(val) => onChangeField('content_data', val)}
               disabled={isSubmitting}
+              config={config}
+              onAddBatch={onAddBatch}
+              onRemoveBatch={onRemoveBatch}
+              onAddSubBatch={onAddSubBatch}
+              onRemoveSubBatch={onRemoveSubBatch}
+              onAddTimeSlot={onAddTimeSlot}
+              onEditTimeSlot={onEditTimeSlot}
+              onRemoveTimeSlot={onRemoveTimeSlot}
             />
           </div>
         )}
@@ -249,7 +339,7 @@ export function ScheduleForm({
           <span>
             <b>Automated scheduling</b>
             <small>
-              Your schedule is stored safely. Upon reaching the chosen date and time, the resource becomes accessible to campus students.
+              Your schedule is stored safely. Upon reaching the chosen date and time, the timetable becomes accessible to campus students.
             </small>
           </span>
         </div>
@@ -257,10 +347,12 @@ export function ScheduleForm({
         {/* Form Footer Actions */}
         <div className="form-foot">
           <span className="foot-resource-indicator">
-            {activeTab === 'link' ? (
+            {activeTab === 'excel' ? (
+              <><FileSpreadsheet size={14} aria-hidden="true" /> Excel spreadsheet timetable</>
+            ) : activeTab === 'link' ? (
               <><Link2 size={14} aria-hidden="true" /> OneDrive resource</>
             ) : (
-              <><Grid3X3 size={14} aria-hidden="true" /> Native timetable data</>
+              <><Grid3X3 size={14} aria-hidden="true" /> Native timetable grid</>
             )}
           </span>
 
@@ -269,7 +361,7 @@ export function ScheduleForm({
               type="button"
               className="secondary-button"
               onClick={onCancel}
-              disabled={isSubmitting || (!form.title && !form.onedrive_url && !form.publish_date && !form.publish_time && !form.content_data)}
+              disabled={isSubmitting || (!form.title && !form.onedrive_url && !form.excel_file && !form.publish_date && !form.publish_time && isGridEmpty())}
             >
               Cancel
             </button>
@@ -280,7 +372,13 @@ export function ScheduleForm({
               disabled={isSubmitting || isFormIncomplete}
             >
               <CalendarClock size={15} aria-hidden="true" />
-              {isSubmitting ? 'Saving...' : activeTab === 'link' ? 'Schedule link' : 'Save schedule grid'}
+              {isSubmitting
+                ? 'Saving...'
+                : activeTab === 'excel'
+                ? 'Publish timetable'
+                : activeTab === 'link'
+                ? 'Schedule link'
+                : 'Save schedule grid'}
             </button>
           </div>
         </div>
