@@ -1,0 +1,26 @@
+{
+  "name": "trainee-assistant-desktop",
+  "version": "5.1.0",
+  "private": true,
+  "description": "Electron shell for Trainee Assistant (alternative to PySide6)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.trainee.assistant",
+    "productName": "Trainee Assistant",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "package.json"],
+    "extraResources": [],
+    "win": { "target": ["nsis"] },
+    "linux": { "target": ["AppImage"] },
+    "mac": { "target": ["dmg"] }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

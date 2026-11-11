@@ -1,0 +1,23 @@
+{
+  "name": "trainee-assistant-ui",
+  "private": true,
+  "version": "5.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test src/lib/state.test.js src/lib/vad.test.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.65.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0"
+  }
+}

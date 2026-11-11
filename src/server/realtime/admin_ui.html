@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trainee Assistant - Admin</title>
+<style>
+ body{font:14px system-ui,sans-serif;margin:0;background:#f5f6f8;color:#1c2333} main{max-width:980px;margin:0 auto;padding:16px}
+ h1{font-size:18px} section{background:#fff;border:1px solid #e1e4ea;border-radius:10px;padding:14px;margin:12px 0}
+ table{width:100%;border-collapse:collapse} td,th{padding:6px 8px;border-bottom:1px solid #eee;text-align:left}
+ input,select,button{font:inherit;padding:6px 8px;border:1px solid #cfd4de;border-radius:6px} button{cursor:pointer;background:#2f5bea;color:#fff;border-color:#2f5bea}
+ button.del{background:#fff;color:#c62828;border-color:#c62828} .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0} .muted{color:#6b7385}
+</style></head><body><main>
+<h1>Trainee Assistant - Admin panel</h1>
+<section><div class="row"><input id="tok" type="password" placeholder="Admin token" size="30"><input id="batch" placeholder="Batch (blank = all you see, * = everyone)" size="34"><button onclick="loadAll()">Load</button></div>
+<div class="muted" id="msg">Changes are pushed live to connected trainee PCs; offline PCs receive them at next login.</div></section>
+<section><h3>Assignments</h3><table id="ta"></table>
+<div class="row"><input id="a_title" placeholder="Title"><input id="a_desc" placeholder="Description" size="30"><input id="a_due" type="datetime-local"><button onclick="addA()">Publish assignment</button></div></section>
+<section><h3>Weekly timetable</h3><table id="tt"></table>
+<div class="row"><select id="s_day"><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select>
+<input id="s_start" type="time"><input id="s_end" type="time"><input id="s_title" placeholder="Title"><input id="s_loc" placeholder="Location"><button onclick="addS()">Publish slot</button></div></section>
+<section><h3>Trainees</h3><table id="tr"></table></section>
+<script>
+const $=id=>document.getElementById(id), D=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+async function api(method,path,body){const r=await fetch("/admin-api/"+path,{method,headers:{"X-Admin-Token":$("tok").value,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+ if(!r.ok){$("msg").textContent="Error "+r.status+": "+(await r.text());throw new Error(r.status)} $("msg").textContent="OK"; return r.json()}
+const q=()=>$("batch").value&&$("batch").value!=="*"?"?batch="+encodeURIComponent($("batch").value):"";
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function loadAll(){
+ const a=(await api("GET","assignments"+q())).assignments, t=(await api("GET","timetable"+q())).timetable, u=(await api("GET","trainees")).trainees;
+ $("ta").innerHTML="<tr><th>Batch</th><th>Title</th><th>Due</th><th></th></tr>"+a.map(x=>`<tr><td>${esc(x.batch)}</td><td>${esc(x.title)}<div class="muted">${esc(x.description)}</div></td><td>${x.due_ts?new Date(x.due_ts*1000).toLocaleString():""}</td><td><button class="del" onclick="del('assignments','${x.id}')">Delete</button></td></tr>`).join("");
+ $("tt").innerHTML="<tr><th>Batch</th><th>Day</th><th>Time</th><th>Title</th><th></th></tr>"+t.map(x=>`<tr><td>${esc(x.batch)}</td><td>${D[x.weekday]}</td><td>${esc(x.start)}-${esc(x.end)}</td><td>${esc(x.title)} ${esc(x.location)}</td><td><button class="del" onclick="del('timetable','${x.id}')">Delete</button></td></tr>`).join("");
+ $("tr").innerHTML="<tr><th>User</th><th>Name</th><th>Batch</th></tr>"+u.map(x=>`<tr><td>${esc(x.user_id)}</td><td>${esc(x.name)}</td><td><input value="${esc(x.batch)}" onchange="setBatch('${esc(x.user_id)}',this.value)"></td></tr>`).join("")}
+const bt=()=>$("batch").value||"default";
+async function addA(){await api("POST","assignments",{batch:bt(),title:$("a_title").value,description:$("a_desc").value,due:$("a_due").value||null});loadAll()}
+async function addS(){await api("POST","timetable",{batch:bt(),weekday:+$("s_day").value,start:$("s_start").value,end:$("s_end").value,title:$("s_title").value,location:$("s_loc").value});loadAll()}
+async function del(kind,id){await api("DELETE",kind+"/"+id);loadAll()}
+async function setBatch(u,b){await api("PUT","trainees/"+encodeURIComponent(u),{batch:b});loadAll()}
+</script></main></body></html>
