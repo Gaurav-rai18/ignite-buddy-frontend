@@ -39,6 +39,7 @@ class AssistantConsumer(AsyncWebsocketConsumer):
         self.busy = False
         self.last_sample = 0.0
         self.device_id = ""
+        self.account_user_id = None
         self.batch = ""
         self.batch_aliases = []
         self.trainee_meta = {}
@@ -90,18 +91,23 @@ class AssistantConsumer(AsyncWebsocketConsumer):
             self.sync_cursor = 0
 
         # Resolve trainee's real cohort, batch, sub-batch, and home lab from Django models
-        def _resolve_account_info(uid):
+        def _resolve_account_info(uid, account_user_id=None):
             try:
                 from server.apps.accounts.models import User as AccountUser
                 from server.apps.schedules.models import Schedule
-                u = (
-                    AccountUser.objects.filter(username__iexact=uid)
-                    .select_related("sub_batch__batch__cohort", "sub_batch__lab", "assigned_batch__cohort", "assigned_cohort")
-                    .first()
-                    or AccountUser.objects.filter(email__iexact=uid)
-                    .select_related("sub_batch__batch__cohort", "sub_batch__lab", "assigned_batch__cohort", "assigned_cohort")
-                    .first()
+                accounts = AccountUser.objects.select_related(
+                    "sub_batch__batch__cohort",
+                    "sub_batch__lab",
+                    "assigned_batch__cohort",
+                    "assigned_cohort",
                 )
+                u = accounts.filter(pk=account_user_id).first() if account_user_id else None
+                if not u:
+                    u = accounts.filter(email__iexact=uid).first()
+                if not u:
+                    # Legacy JWTs use usernames as their subject. Prefer a trainee
+                    # account when usernames collide with faculty/admin accounts.
+                    u = accounts.filter(username__iexact=uid, role="TRAINEE").first()
                 meta = {}
                 if u:
                     sb_code = u.sub_batch_code
@@ -130,7 +136,12 @@ class AssistantConsumer(AsyncWebsocketConsumer):
             except Exception:
                 return None, {}
 
-        acc_user, self.trainee_meta = await asyncio.to_thread(_resolve_account_info, user.id)
+        acc_user, self.trainee_meta = await asyncio.to_thread(
+            _resolve_account_info,
+            user.id,
+            getattr(user, "account_user_id", None),
+        )
+        self.account_user_id = getattr(acc_user, "id", None)
 
         # Collect all batch aliases for this trainee
         batch_candidates = set()
@@ -228,8 +239,75 @@ class AssistantConsumer(AsyncWebsocketConsumer):
                 "title": event.get("title", ""),
                 "message": event.get("message", ""),
                 "text": event.get("text", ""),
+                "priority": event.get("priority", "normal"),
+                "category": event.get("category", "general"),
+                "action_url": event.get("action_url", ""),
+                "action_label": event.get("action_label", ""),
                 "created_at": event.get("created_at", ""),
             })
+
+    # ---------------- assignments (trainee desktop) ----------------
+    def _account_user(self):
+        """The Django account row behind this WebSocket session (or None)."""
+        from server.apps.accounts.models import User as AccountUser
+
+        qs = AccountUser.objects.all()
+        account_user_id = self.account_user_id or getattr(self.user, "account_user_id", None)
+        if account_user_id:
+            u = qs.filter(pk=account_user_id).first()
+            if u:
+                return u
+        uid = getattr(self.user, "id", "") or ""
+        return (
+            qs.filter(email__iexact=uid).first()
+            or qs.filter(username__iexact=uid, role="TRAINEE").first()
+        )
+
+    async def on_assignments_get(self, msg):
+        """Send the trainee the published assignments targeted at them."""
+        if not self.user:
+            return
+        await self.send_json({"type": "assignments_data", "assignments": await asyncio.to_thread(self._assignments_payload)})
+
+    def _assignments_payload(self):
+        from server.apps.assignments.services import assignment_payload_for
+
+        try:
+            account_user = self._account_user()
+            return assignment_payload_for(account_user) if account_user else []
+        except Exception:
+            log.exception("failed to build assignment payload")
+            return []
+
+    async def on_assignment_submit(self, msg):
+        """Record a trainee's submission (same code path as the REST API)."""
+        if not self.user:
+            return
+        result = await asyncio.to_thread(self._submit_assignment, msg)
+        await self.send_json({"type": "assignment_submitted", **result})
+        if result.get("ok"):
+            await self.send_json({"type": "assignments_data", "assignments": await asyncio.to_thread(self._assignments_payload)})
+
+    def _submit_assignment(self, msg):
+        from server.apps.assignments.models import Assignment
+        from server.apps.assignments.services import record_submission
+
+        try:
+            account_user = self._account_user()
+            if not account_user:
+                return {"ok": False, "error": "Your account could not be found on the server."}
+            text = str(msg.get("submission_text") or "").strip()
+            link = str(msg.get("submission_link") or "").strip()
+            if not text and not link:
+                return {"ok": False, "error": "Provide a submission link or a text response."}
+            assignment = Assignment.objects.filter(pk=msg.get("assignment_id"), is_published=True).first()
+            if not assignment:
+                return {"ok": False, "error": "Assignment not found."}
+            recipient = record_submission(assignment, account_user, submission_text=text, submission_link=link)
+            return {"ok": True, "assignment_id": assignment.id, "recipient_id": recipient.id, "status": recipient.status}
+        except Exception:
+            log.exception("assignment submission failed")
+            return {"ok": False, "error": "Submission could not be recorded. Please try again."}
 
     # ---------------- framing ----------------
     async def send_json(self, msg):

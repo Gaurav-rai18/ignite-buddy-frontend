@@ -22,6 +22,7 @@ class User:
     name: str = ""
     role: str = "trainee"
     batch: str = "default"
+    account_user_id: int | None = None
 
 
 @dataclass

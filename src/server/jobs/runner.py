@@ -18,8 +18,10 @@ from server.realtime import notifier, presence
 
 log = logging.getLogger("scheduler")
 MISSED_AFTER = 120            # seconds late before an item is labelled "(missed)"
+ASSIGNMENT_REMINDER_EVERY = 60  # seconds between deadline-reminder scans
 _state: dict[str, dict] = {}
 _last_error: dict[str, float] = {}
+_last_assignment_scan = 0.0
 
 
 def tick(store, send, now: float | None = None):
@@ -88,10 +90,29 @@ def tick_all(now: float | None = None):
                 log.exception("scheduler failed for one user (run `trainee-doctor`): %s", e)
 
 
+def tick_assignments(now: float | None = None) -> int:
+    """Scan published assignments and dispatch the 24h / 1h deadline reminders.
+
+    Persisted through the shared notification service, so this is safe to run on
+    every tick: reminder flags + dedupe keys guarantee each reminder is sent once.
+    Returns the number of reminders created (0 when nothing was due).
+    """
+    try:
+        from server.apps.assignments.notifications import send_deadline_reminders
+        return send_deadline_reminders()
+    except Exception:
+        log.exception("assignment deadline reminder scan failed")
+        return 0
+
+
 def run_forever():
+    global _last_assignment_scan
     last_slow = 0.0
     while True:
         tick_all()
+        if time.time() - _last_assignment_scan > ASSIGNMENT_REMINDER_EVERY:
+            _last_assignment_scan = time.time()
+            tick_assignments()
         if time.time() - last_slow > 60:
             last_slow = time.time()
             for uid in presence.user_ids():

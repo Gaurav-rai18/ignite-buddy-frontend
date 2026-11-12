@@ -19,6 +19,12 @@ export const initialState = {
   mustChangePassword: null,             // { userId, name, message } if first-time / reset password change required
   // Multi-turn RAG conversation shown in the top-middle panel
   conversation: [],                     // [{role:'user'|'assistant', text, streaming?}]
+  // Assignments published by the admin/faculty panel and targeted at this trainee
+  assignments: [],                      // [{id, title, subject, instructions, due_at, status, ...}]
+  assignmentsLoaded: false,             // true once the server answered assignments_get
+  assignmentsLoading: false,
+  assignmentSubmittingId: null,         // assignment id currently being submitted
+  assignmentFocusId: null,              // assignment the trainee asked to open (from a notification)
   vault: { tasks: [], notes: [] },
   filesView: null,                      // { folder, path, items: [{name, is_dir, path, ext, size}] }
   scheduleView: { slots: [], today_weekday: 0, time_now: "" },
@@ -70,8 +76,10 @@ export function reducer(state, action) {
       const isNotes = action.text && (action.text.includes("Recent notes:") || action.text.includes("No notes yet") || action.text.includes("Note saved"));
       const isFiles = action.text && ((action.text.includes("items in") || action.text.includes("items):")) && (action.text.includes("[DIR]") || action.text.includes("Found ")));
       const isTimers = action.text && (action.text.includes("active timers") || action.text.includes("pending reminders") || action.text.includes("Timer set for") || action.text.includes("Reminder set for"));
-      const tab = isHelp ? "help" : isTasks ? "tasks" : isNotes ? "notes" : isFiles ? "files" : isTimers ? "timers" : state.activeTab;
-      const shouldOpenModal = isHelp || isTasks || isNotes || isFiles;
+      // The local assignment ops render checklist lines ("[ ] Title: due ...").
+      const isAssignments = action.text && /(^|\n)\s*\[( |DONE)\]/.test(action.text);
+      const tab = isHelp ? "help" : isTasks ? "tasks" : isNotes ? "notes" : isFiles ? "files" : isTimers ? "timers" : isAssignments ? "assignments" : state.activeTab;
+      const shouldOpenModal = isHelp || isTasks || isNotes || isFiles || isAssignments;
       return {
         ...state,
         turn: { ...t, steps: [...t.steps, { id: nid(), text: action.text }], answer: isHelp ? action.text : t.answer },
@@ -138,6 +146,10 @@ export function reducer(state, action) {
         title: action.title || "",
         message: action.message || "",
         text: action.text || (action.title ? `${action.title}: ${action.message}` : ""),
+        priority: action.priority || "normal",
+        category: action.category || "general",
+        action_url: action.action_url || "",
+        action_label: action.action_label || "",
         created_at: action.created_at || new Date().toISOString(),
       };
       return {
@@ -185,6 +197,40 @@ export function reducer(state, action) {
     }
     case "conversation_reset":
       return { ...state, conversation: [], answerOpen: false, turn: null };
+    // ---------- assignments (published by the admin/faculty panel) ----------
+    case "assignments_loading":
+      return { ...state, assignmentsLoading: !!action.loading };
+    case "assignments_data":
+      return {
+        ...state,
+        assignments: action.assignments || [],
+        assignmentsLoaded: true,
+        assignmentsLoading: false,
+        assignmentSubmittingId: null,
+      };
+    case "assignment_submitting":
+      return { ...state, assignmentSubmittingId: action.id ?? null };
+    case "assignment_submitted": {
+      const base = { ...state, assignmentSubmittingId: null };
+      if (action.ok === false) {
+        const t = {
+          id: nid(),
+          kind: "assignment",
+          title: "Submission Failed",
+          message: action.error || "Your submission could not be recorded. Please try again.",
+          priority: "high",
+          category: "assignment",
+          action_url: "",
+          action_label: "",
+          created_at: new Date().toISOString(),
+        };
+        return { ...base, toasts: [...base.toasts, t] };
+      }
+      return base;
+    }
+    case "assignment_focus":
+      // A "New Assignment Posted" / reminder notification opens the assignments workspace.
+      return { ...state, assignmentFocusId: action.id ?? null, activeTab: "assignments", answerOpen: true };
     case "vault_data":
       return { ...state, vault: { tasks: action.tasks || [], notes: action.notes || [] } };
     case "folder_listing":

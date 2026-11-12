@@ -53,7 +53,11 @@ export function AssignmentForm({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit();
+    onSubmit({ publish: true });
+  };
+
+  const handleSaveDraft = () => {
+    onSubmit({ publish: false });
   };
 
   const recipientReady =
@@ -193,6 +197,25 @@ export function AssignmentForm({
             </div>
           </Field>
         </div>
+
+        {/* Deadline time — drives the 24h / 1h reminders */}
+        <Field
+          label="Deadline Time"
+          htmlFor="assignment-deadline-time"
+          helpText="Used for the automatic 24-hour and 1-hour deadline reminders. Defaults to end of day."
+        >
+          <div className="input-with-icon">
+            <Clock size={13} className="input-icon" aria-hidden="true" />
+            <input
+              id="assignment-deadline-time"
+              type="time"
+              value={form.deadline_time || '23:59'}
+              onChange={(e) => onChangeField('deadline_time', e.target.value)}
+              disabled={isSubmitting}
+              className="input-padded-left"
+            />
+          </div>
+        </Field>
 
         {/* Recipients */}
         <div className="field">
@@ -452,6 +475,15 @@ export function AssignmentForm({
               title="Preview assignment details"
             >
               <Eye size={15} aria-hidden="true" /> Preview
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleSaveDraft}
+              disabled={isSubmitting || isFormIncomplete}
+              title="Save as draft without notifying students"
+            >
+              Save as draft
             </button>
             <button
               type="submit"

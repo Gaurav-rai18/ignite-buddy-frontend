@@ -34,7 +34,8 @@ from shared import protocol as P
 
 STATIC = Path(__file__).parent / "static"
 UI_TO_SHELL = {"shell_hit", "shell_hide", "shell_quit", "shell_active"}          # window control for the PySide6 desktop shell (ignored in a plain browser)
-UI_TO_SERVER = {"text", "audio", "cancel", "settings", "confirm_response", "choose_response", "dev_set_blocked", "ping"}
+UI_TO_SERVER = {"text", "audio", "cancel", "settings", "confirm_response", "choose_response", "dev_set_blocked", "ping",
+                "assignments_get", "assignment_submit"}   # assignment list/submission relayed to the central server
 UI_LOCAL_MIC = {"mic_start", "mic_stop", "mic_cancel"}                           # local mic capture forwarded to backend STT
 AUTH_TIMEOUT = 5.0
 FALLBACK = "<h3>Trainee Assistant agent is running, but the React UI is not built.</h3><p>Run <code>npm install && npm run build</code> in <code>frontend/</code>.</p>"

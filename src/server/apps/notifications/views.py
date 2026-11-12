@@ -171,7 +171,12 @@ class UserNotificationView(APIView):
                 "notification_id": item.notification_id,
                 "title": item.notification.title,
                 "message": item.notification.message,
+                "category": item.notification.category,
+                "priority": item.notification.priority,
+                "action_url": item.notification.action_url,
+                "action_label": item.notification.action_label,
                 "is_read": item.is_read,
+                "read_at": item.read_at,
                 "created_at": item.created_at,
             }
             for item in recipients

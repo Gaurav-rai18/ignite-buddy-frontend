@@ -104,6 +104,54 @@ test("PCM16 conversion downsamples to 16 kHz and clips", () => {
   assert.deepEqual([out.length, out[0], out[1]], [160, -32768, 32767]);
 });
 
+test("assignment notifications open the workspace and keep their action target", () => {
+  let s = run(ready, {
+    type: "notification",
+    kind: "assignment",
+    title: "New Assignment Posted",
+    message: "Hi Trainee! A new assignment, React Lab, has been posted by Ravi.",
+    priority: "high",
+    category: "assignment",
+    action_url: "/assignments/12",
+    action_label: "View Assignment",
+  });
+  assert.equal(s.toasts.length, 1);
+  assert.equal(s.toasts[0].category, "assignment");
+  assert.equal(s.toasts[0].action_url, "/assignments/12");
+  assert.equal(s.toasts[0].priority, "high");
+
+  s = reducer(s, { type: "assignment_focus", id: 12 });
+  assert.deepEqual([s.activeTab, s.answerOpen, s.assignmentFocusId], ["assignments", true, 12]);
+});
+
+test("assignments load into state; a failed submission raises a toast", () => {
+  let s = run(ready,
+    { type: "assignments_loading", loading: true },
+    { type: "assignments_data", assignments: [{ id: 1, title: "Lab 1", status: "PENDING" }] });
+  assert.deepEqual([s.assignmentsLoaded, s.assignmentsLoading, s.assignments.length], [true, false, 1]);
+
+  s = reducer(s, { type: "assignment_submitting", id: 1 });
+  assert.equal(s.assignmentSubmittingId, 1);
+
+  s = reducer(s, { type: "assignment_submitted", ok: false, error: "Provide a submission link." });
+  const toast = s.toasts[s.toasts.length - 1];
+  assert.deepEqual(
+    [s.assignmentSubmittingId, toast.kind, toast.title, toast.message],
+    [null, "assignment", "Submission Failed", "Provide a submission link."]
+  );
+
+  // A successful submission clears the spinner and does not add a toast.
+  const count = s.toasts.length;
+  s = reducer(s, { type: "assignment_submitted", ok: true, assignment_id: 1, status: "SUBMITTED" });
+  assert.deepEqual([s.assignmentSubmittingId, s.toasts.length], [null, count]);
+});
+
+test("local assignment output opens the assignments tab", () => {
+  const s = run(ready, { type: "say", text: "[ ] React Lab: due Mon 10:00\n[DONE] SQL Drill: due Fri 09:00" });
+  assert.equal(s.activeTab, "assignments");
+  assert.equal(s.answerOpen, true);
+});
+
 test("streaming tokens keep a single user/assistant pair in conversation", () => {
   let s = run(ready, { type: "user_text", text: "what is a stream" },
               { type: "token", text: "A " },

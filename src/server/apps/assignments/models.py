@@ -4,8 +4,12 @@ Assignment Models
 Manages coursework assignments, student tasks, deadlines, and submissions
 across the TCS Ignite hierarchy (Cohorts, Batches, Sub-batches/Labs, and Users).
 """
+from datetime import datetime, time
+
 from django.db import models
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+
 from server.apps.accounts.models import User, Cohort, Batch, SubBatch
 
 
@@ -23,7 +27,12 @@ class Assignment(models.Model):
     subject = models.CharField(max_length=100, help_text="Academic subject or module")
     platform_link = models.URLField(max_length=500, blank=True, null=True, help_text="External URL (HackerEarth, LeetCode, GitHub, etc.)")
     start_date = models.DateField(default=timezone.now)
-    deadline = models.DateField(help_text="Submission deadline")
+    deadline = models.DateField(help_text="Submission deadline (date)")
+    deadline_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Precise submission deadline (date and time, timezone-aware). Falls back to end of `deadline` day.",
+    )
     message = models.TextField(help_text="Detailed assignment description and instructions")
 
     recipient_type = models.CharField(
@@ -65,6 +74,16 @@ class Assignment(models.Model):
     )
     audience = models.CharField(max_length=200, default="All students")
 
+    # Publish workflow: a draft is created without notifying anyone and becomes
+    # visible/publishable later. Defaults to True so the historical behaviour
+    # (create == publish) is preserved for existing callers.
+    is_published = models.BooleanField(default=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    # Deadline reminder bookkeeping — guarantees the 24h / 1h reminders fire at most once.
+    reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -82,8 +101,30 @@ class Assignment(models.Model):
         return f"{self.topic} ({self.subject}) - Due {self.deadline}"
 
     @property
+    def due_at(self):
+        """Timezone-aware deadline instant.
+
+        Uses the precise ``deadline_at`` when provided, otherwise the end of the
+        ``deadline`` day (23:59:59) interpreted in the active timezone.
+        """
+        if self.deadline_at:
+            if timezone.is_naive(self.deadline_at):
+                return timezone.make_aware(self.deadline_at)
+            return self.deadline_at
+        deadline = self.deadline
+        if isinstance(deadline, str):  # e.g. an instance built straight from JSON before reload
+            deadline = parse_date(deadline)
+        if not deadline:
+            return None
+        naive = datetime.combine(deadline, time(23, 59, 59))
+        return timezone.make_aware(naive) if timezone.is_naive(naive) else naive
+
+    @property
     def is_past_due(self):
-        return timezone.now().date() > self.deadline
+        due = self.due_at
+        if due is None:
+            return False
+        return timezone.now() > due
 
 
 class AssignmentRecipient(models.Model):
@@ -114,6 +155,12 @@ class AssignmentRecipient(models.Model):
 
     grade = models.CharField(max_length=20, blank=True, null=True)
     feedback = models.TextField(blank=True, null=True)
+    resubmission_required = models.BooleanField(
+        default=False,
+        help_text="When set, deadline reminders are sent again even after a submission.",
+    )
+    notified_24h_at = models.DateTimeField(null=True, blank=True)
+    notified_1h_at = models.DateTimeField(null=True, blank=True)
     evaluated_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -132,3 +179,10 @@ class AssignmentRecipient(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.assignment.topic} [{self.status}]"
+
+    @property
+    def needs_reminder(self):
+        """Trainees who have not submitted (or whose submission was sent back) get deadline reminders."""
+        if self.resubmission_required:
+            return True
+        return self.status == "PENDING"

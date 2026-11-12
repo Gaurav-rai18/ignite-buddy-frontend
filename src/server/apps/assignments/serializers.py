@@ -52,6 +52,9 @@ class AssignmentSerializer(serializers.ModelSerializer):
     target_username = serializers.SerializerMethodField()
     recipients_count = serializers.SerializerMethodField()
     submissions_count = serializers.SerializerMethodField()
+    due_at = serializers.DateTimeField(read_only=True)
+    my_status = serializers.SerializerMethodField()
+    my_recipient_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
@@ -63,6 +66,8 @@ class AssignmentSerializer(serializers.ModelSerializer):
             "platform_link",
             "start_date",
             "deadline",
+            "deadline_at",
+            "due_at",
             "message",
             "recipient_type",
             "target_role",
@@ -72,16 +77,22 @@ class AssignmentSerializer(serializers.ModelSerializer):
             "target_sub_batch_code",
             "target_username",
             "audience",
+            "is_published",
+            "published_at",
             "author_name",
             "posted_by_me",
             "recipients_count",
             "submissions_count",
+            "my_status",
+            "my_recipient_id",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "id",
             "title",
+            "due_at",
+            "published_at",
             "created_at",
             "updated_at",
             "author_name",
@@ -92,7 +103,27 @@ class AssignmentSerializer(serializers.ModelSerializer):
             "target_username",
             "recipients_count",
             "submissions_count",
+            "my_status",
+            "my_recipient_id",
         ]
+
+    def _my_recipient(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not getattr(user, "is_authenticated", False):
+            return None
+        for recipient in obj.recipients.all():
+            if recipient.user_id == user.id:
+                return recipient
+        return None
+
+    def get_my_status(self, obj):
+        recipient = self._my_recipient(obj)
+        return recipient.status if recipient else None
+
+    def get_my_recipient_id(self, obj):
+        recipient = self._my_recipient(obj)
+        return recipient.id if recipient else None
 
     def get_author_name(self, obj):
         if not obj.created_by:

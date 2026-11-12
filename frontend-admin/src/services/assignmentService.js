@@ -30,6 +30,21 @@ export const assignmentService = {
     return response.data;
   },
 
+  updateAssignment: async (id, payload, options = {}) => {
+    const response = await apiClient.patch(`/assignments/${id}/`, payload, options);
+    return response.data;
+  },
+
+  // Publishing a draft triggers the "New Assignment Posted" notification for the audience.
+  publishAssignment: async (id, options = {}) => {
+    const response = await apiClient.patch(
+      `/assignments/${id}/`,
+      { is_published: true },
+      options
+    );
+    return response.data;
+  },
+
   deleteAssignment: async (id, options = {}) => {
     const response = await apiClient.delete(`/assignments/${id}/`, options);
     return response.data;

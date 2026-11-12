@@ -9,6 +9,7 @@ const INITIAL_FORM = {
   platform_link: '',
   start_date: '',
   deadline: '',
+  deadline_time: '23:59',
   message: '',
   recipientMode: 'All users',
   role: '',
@@ -20,6 +21,14 @@ const INITIAL_FORM = {
   selectedUsers: [],
   audience: 'All students',
 };
+
+function buildDeadlineAt(dateStr, timeStr) {
+  if (!dateStr) return null;
+  const time = (timeStr || '23:59').slice(0, 5);
+  const dt = new Date(`${dateStr}T${time}:00`);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt.toISOString();
+}
 
 function validateAssignmentForm(form) {
   const errors = {};
@@ -51,6 +60,11 @@ export function useAssignments() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [historyFilter, setHistoryFilter] = useState('mine'); // 'mine' | 'others'
   const [deadlineUpdating, setDeadlineUpdating] = useState({});
+  const [publishingId, setPublishingId] = useState(null);
+  const [submissionsAssignmentId, setSubmissionsAssignmentId] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [evaluationSaving, setEvaluationSaving] = useState({});
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -143,8 +157,9 @@ export function useAssignments() {
     });
   }, []);
 
-  const submitAssignment = useCallback(async (onSuccess) => {
+  const submitAssignment = useCallback(async (onSuccess, options = {}) => {
     if (isSubmitting) return false;
+    const publish = options.publish !== false;
     const validation = validateAssignmentForm(form);
     if (!validation.isValid) {
       setFormErrors(validation.errors);
@@ -160,7 +175,9 @@ export function useAssignments() {
         platform_link: form.platform_link.trim() || null,
         start_date: form.start_date,
         deadline: form.deadline,
+        deadline_at: buildDeadlineAt(form.deadline, form.deadline_time),
         message: form.message.trim(),
+        is_published: publish,
       };
       const mode = form.recipientMode || DEFAULT_RECIPIENT_MODE;
       if (mode === 'All users') {
@@ -192,7 +209,9 @@ export function useAssignments() {
       await assignmentService.createAssignment(payload);
       if (isMountedRef.current) setForm(INITIAL_FORM);
       await fetchAssignments();
-      if (onSuccess) onSuccess('Assignment published successfully');
+      if (onSuccess) {
+        onSuccess(publish ? 'Assignment published successfully' : 'Draft saved successfully');
+      }
       return true;
     } catch (err) {
       if (isMountedRef.current && !isRequestCancellation(err)) {
@@ -203,6 +222,73 @@ export function useAssignments() {
       if (isMountedRef.current) setIsSubmitting(false);
     }
   }, [form, isSubmitting, fetchAssignments]);
+
+  const publishAssignment = useCallback(async (id, onSuccess) => {
+    setPublishingId(id);
+    setError('');
+    try {
+      await assignmentService.publishAssignment(id);
+      setAssignments((prev) =>
+        prev.map((a) => (String(a.id) === String(id) ? { ...a, is_published: true } : a))
+      );
+      if (onSuccess) onSuccess('Assignment published and students notified');
+      return true;
+    } catch (err) {
+      if (isMountedRef.current && !isRequestCancellation(err)) {
+        setError(formatErrorMessage(err));
+      }
+      return false;
+    } finally {
+      setPublishingId(null);
+    }
+  }, []);
+
+  const openSubmissions = useCallback(async (id) => {
+    setSubmissionsAssignmentId(id);
+    setSubmissions([]);
+    setSubmissionsLoading(true);
+    setError('');
+    try {
+      const data = await assignmentService.getSubmissions(id);
+      if (isMountedRef.current) setSubmissions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      if (isMountedRef.current && !isRequestCancellation(err)) {
+        setError(formatErrorMessage(err));
+      }
+    } finally {
+      if (isMountedRef.current) setSubmissionsLoading(false);
+    }
+  }, []);
+
+  const closeSubmissions = useCallback(() => {
+    setSubmissionsAssignmentId(null);
+    setSubmissions([]);
+  }, []);
+
+  const evaluateSubmission = useCallback(async (recipientId, evaluationData, onSuccess) => {
+    if (!submissionsAssignmentId) return false;
+    setEvaluationSaving((prev) => ({ ...prev, [recipientId]: true }));
+    setError('');
+    try {
+      const updated = await assignmentService.evaluateSubmission(
+        submissionsAssignmentId,
+        recipientId,
+        evaluationData,
+      );
+      setSubmissions((prev) =>
+        prev.map((s) => (String(s.id) === String(recipientId) ? { ...s, ...updated } : s))
+      );
+      if (onSuccess) onSuccess('Evaluation saved and student notified');
+      return true;
+    } catch (err) {
+      if (isMountedRef.current && !isRequestCancellation(err)) {
+        setError(formatErrorMessage(err));
+      }
+      return false;
+    } finally {
+      setEvaluationSaving((prev) => ({ ...prev, [recipientId]: false }));
+    }
+  }, [submissionsAssignmentId]);
 
   const updateDeadline = useCallback(async (id, deadline, onSuccess) => {
     setDeadlineUpdating((prev) => ({ ...prev, [id]: true }));
@@ -230,12 +316,21 @@ export function useAssignments() {
     form,
     historyFilter,
     deadlineUpdating,
+    publishingId,
+    submissionsAssignmentId,
+    submissions,
+    submissionsLoading,
+    evaluationSaving,
     setHistoryFilter,
     updateFormField,
     toggleRecipient,
     setRecipients,
     submitAssignment,
+    publishAssignment,
     updateDeadline,
+    openSubmissions,
+    closeSubmissions,
+    evaluateSubmission,
     refetch: fetchAssignments,
     clearError: () => setError(''),
   };

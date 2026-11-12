@@ -220,7 +220,12 @@ class LoginView(APIView):
             user.last_active_at = timezone.now()
             user.save()
             batch_code = user.full_batch_name
-            token = issue_jwt(user.username, user.get_full_name() or user.username, batch_code)
+            token = issue_jwt(
+                user.username,
+                user.get_full_name() or user.username,
+                batch_code,
+                account_user_id=user.pk,
+            )
             # Ensure central.db is kept in sync with the trainee's batch assignment
             try:
                 c = get_central()

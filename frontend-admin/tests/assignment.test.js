@@ -84,6 +84,16 @@ describe('Assignment Feature Integration Tests', () => {
     assert.match(content, /deleteAssignment:/, 'assignmentService must implement deleteAssignment');
   });
 
+  it('Publish assignment submits as published and triggers the immediate notification path', () => {
+    const formContent = readFileSync(resolve('src/components/assignment/AssignmentForm.jsx'), 'utf8');
+    const hookContent = readFileSync(resolve('src/hooks/useAssignments.js'), 'utf8');
+    const serviceContent = readFileSync(resolve('src/services/assignmentService.js'), 'utf8');
+
+    assert.match(formContent, /onSubmit\(\{\s*publish:\s*true\s*\}\)/);
+    assert.match(hookContent, /is_published:\s*publish/);
+    assert.match(serviceContent, /createAssignment:\s*async/);
+  });
+
   it('Profile.jsx and Settings.jsx do not display Zero Trust Enforced text', () => {
     const profilePath = resolve('src/pages/Profile/Profile.jsx');
     const profileContent = readFileSync(profilePath, 'utf8');

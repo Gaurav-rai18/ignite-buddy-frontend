@@ -416,43 +416,59 @@ export default function Bubble({
 /**
  * Toast notifications for asynchronous events and reminders.
  */
-export function Toasts({ toasts, dismiss, onOpenBroadcast }) {
+export function Toasts({ toasts, dismiss, onOpenBroadcast, onOpenAssignment }) {
   return (
     <div className="toasts" data-hit={toasts.length ? "" : undefined}>
       {toasts.map((t) => {
-        const isBroadcast = t.kind === "broadcast" || Boolean(t.message);
+        const isAssignment = t.kind === "assignment" || t.category === "assignment";
+        const isBroadcast = !isAssignment && (t.kind === "broadcast" || Boolean(t.message));
+        const isUrgent = t.priority === "urgent" || t.priority === "high";
         return (
           <div
             key={t.id}
-            className={`toast ${isBroadcast ? "toast-broadcast" : ""}`}
+            className={`toast ${isBroadcast ? "toast-broadcast" : ""} ${isAssignment ? "toast-assignment" : ""} ${
+              isUrgent ? "toast-priority" : ""
+            }`}
             onClick={() => {
-              if (isBroadcast && onOpenBroadcast) {
+              if (isAssignment && onOpenAssignment) {
+                onOpenAssignment(t);
+              } else if (isBroadcast && onOpenBroadcast) {
                 onOpenBroadcast(t);
               } else {
                 dismiss(t.id);
               }
             }}
-            title={isBroadcast ? "Click to view announcement details" : "Click to dismiss"}
+            title={
+              isAssignment
+                ? "Click to open this assignment"
+                : isBroadcast
+                ? "Click to view announcement details"
+                : "Click to dismiss"
+            }
             role="button"
             tabIndex={0}
           >
             <div className="toast-icon-wrap">
-              {isBroadcast ? (
+              {isAssignment ? (
+                <ClipboardList size={14} className="toast-icon assignment-icon" aria-hidden="true" />
+              ) : isBroadcast ? (
                 <Megaphone size={14} className="toast-icon broadcast-icon" aria-hidden="true" />
-              ) : t.kind === "assignment" ? (
-                <ClipboardList size={14} className="toast-icon" aria-hidden="true" />
               ) : (
                 <Bell size={14} className="toast-icon" aria-hidden="true" />
               )}
             </div>
             <div className="toast-content">
               {t.title ? (
-                <span className="toast-title">{t.title}</span>
+                <span className="toast-title">
+                  {t.title}
+                  {isUrgent && <span className="toast-priority-dot" title="Priority" aria-label="High priority" />}
+                </span>
               ) : null}
               <span className="toast-snippet">
                 {t.message ? (t.message.length > 55 ? t.message.slice(0, 55) + "..." : t.message) : t.text}
               </span>
             </div>
+            {isAssignment && <span className="toast-view-pill">Open</span>}
             {isBroadcast && (
               <span className="toast-view-pill">View</span>
             )}

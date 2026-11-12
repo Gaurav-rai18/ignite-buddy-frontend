@@ -28,6 +28,19 @@ class Notification(models.Model):
         default="ALL",
     )
 
+    # Presentation / routing metadata (used by assignment + system notifications).
+    category = models.CharField(max_length=32, default="general", db_index=True)
+    priority = models.CharField(max_length=16, default="normal")  # normal | high | urgent
+    action_url = models.CharField(max_length=500, blank=True, default="", help_text="Deep link opened when the notification is clicked")
+    action_label = models.CharField(max_length=120, blank=True, default="")
+    dedupe_key = models.CharField(
+        max_length=180,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="When set, at most one notification is ever created for this key.",
+    )
+
     # Scoped targeting filters
     target_role = models.CharField(max_length=20, null=True, blank=True)
     target_cohort = models.ForeignKey(Cohort, null=True, blank=True, on_delete=models.SET_NULL, related_name="notifications")

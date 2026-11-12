@@ -3,6 +3,7 @@ import { PageIntro } from '../../components/ui/PageIntro';
 import { ErrorBanner } from '../../components/ui/ErrorBanner';
 import { AssignmentForm } from '../../components/assignment/AssignmentForm';
 import { AssignmentList } from '../../components/assignment/AssignmentList';
+import { AssignmentSubmissionsModal } from '../../components/assignment/AssignmentSubmissionsModal';
 import { useAssignments } from '../../hooks/useAssignments';
 
 export function Assignments({ onNotify }) {
@@ -15,19 +16,30 @@ export function Assignments({ onNotify }) {
     form,
     historyFilter,
     deadlineUpdating,
+    publishingId,
+    submissionsAssignmentId,
+    submissions,
+    submissionsLoading,
+    evaluationSaving,
     setHistoryFilter,
     updateFormField,
     toggleRecipient,
     setRecipients,
     submitAssignment,
+    publishAssignment,
     updateDeadline,
+    openSubmissions,
+    closeSubmissions,
+    evaluateSubmission,
     refetch,
   } = useAssignments();
 
-  const handleSubmit = () => {
-    submitAssignment((msg) => {
-      if (onNotify) onNotify(msg);
-    });
+  const notify = (msg) => {
+    if (onNotify) onNotify(msg);
+  };
+
+  const handleSubmit = (options) => {
+    submitAssignment(notify, options);
   };
 
   const handleFocusForm = () => {
@@ -35,9 +47,19 @@ export function Assignments({ onNotify }) {
   };
 
   const handleUpdateDeadline = (id, deadline) => {
-    updateDeadline(id, deadline, (msg) => {
-      if (onNotify) onNotify(msg);
-    });
+    updateDeadline(id, deadline, notify);
+  };
+
+  const handlePublish = (id) => {
+    publishAssignment(id, notify);
+  };
+
+  const activeAssignment = assignments.find(
+    (a) => String(a.id) === String(submissionsAssignmentId)
+  );
+
+  const handleEvaluate = (recipientId, evaluationData) => {
+    evaluateSubmission(recipientId, evaluationData, notify);
   };
 
   return (
@@ -45,7 +67,7 @@ export function Assignments({ onNotify }) {
       <PageIntro
         eyebrow="ACADEMICS"
         title="Assignments"
-        subtitle="Create and publish assignments for your students. Track and update deadlines from history."
+        subtitle="Create, publish and manage assignments for your students. Review submissions, evaluate work and share feedback."
       />
 
       {error && <ErrorBanner message={error} onRetry={refetch} />}
@@ -68,8 +90,21 @@ export function Assignments({ onNotify }) {
           onCreateClick={handleFocusForm}
           deadlineUpdating={deadlineUpdating}
           onUpdateDeadline={handleUpdateDeadline}
+          onPublish={handlePublish}
+          publishingId={publishingId}
+          onViewSubmissions={openSubmissions}
         />
       </div>
+
+      <AssignmentSubmissionsModal
+        isOpen={submissionsAssignmentId !== null}
+        assignment={activeAssignment}
+        submissions={submissions}
+        loading={submissionsLoading}
+        evaluationSaving={evaluationSaving}
+        onClose={closeSubmissions}
+        onEvaluate={handleEvaluate}
+      />
     </>
   );
 }

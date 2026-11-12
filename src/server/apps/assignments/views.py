@@ -4,13 +4,23 @@ Assignment Views
 Provides endpoints for creating, retrieving, updating deadlines,
 submitting, and evaluating coursework assignments in Ignite Buddy.
 """
+import logging
+
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import DateTimeField
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Assignment, AssignmentRecipient
+from .notifications import (
+    notify_new_assignment,
+    notify_deadline_updated,
+    notify_evaluated,
+)
+from .services import record_submission
 from .serializers import (
     AssignmentSerializer,
     AssignmentDeadlineUpdateSerializer,
@@ -20,8 +30,17 @@ from .serializers import (
 )
 from server.apps.accounts.models import User, Cohort, Batch, SubBatch
 from server.apps.accounts.permissions import CanManageAssignments
-from server.channels_push import send_channel_message
-from server.realtime import notifier
+
+log = logging.getLogger("assignments.views")
+
+
+def _truthy(value, default=True):
+    """Interpret a loosely-typed request flag (bool / 'true' / '1' / 'yes')."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() not in ("false", "0", "no", "off", "")
 
 
 class AssignmentListCreateView(APIView):
@@ -31,9 +50,9 @@ class AssignmentListCreateView(APIView):
         user = request.user
         qs = Assignment.objects.all().prefetch_related("recipients", "target_batches", "target_sub_batches").select_related("target_cohort", "created_by")
 
-        # If trainee, show only assignments assigned to this student
+        # If trainee, show only *published* assignments assigned to this student
         if user.role == "TRAINEE" and not (user.is_superuser or user.is_staff):
-            qs = qs.filter(recipients__user=user).distinct()
+            qs = qs.filter(recipients__user=user, is_published=True).distinct()
 
         # Optional query filters
         subject = request.query_params.get("subject")
@@ -64,8 +83,16 @@ class AssignmentListCreateView(APIView):
         platform_link = data.get("platform_link") or None
         start_date = data.get("start_date")
         deadline = data.get("deadline")
+        raw_deadline_at = data.get("deadline_at") or None
+        try:
+            deadline_at = DateTimeField().run_validation(raw_deadline_at) if raw_deadline_at else None
+        except ValidationError as exc:
+            return Response({"deadline_at": exc.detail}, status=status.HTTP_400_BAD_REQUEST)
         message = str(data.get("message") or "").strip()
         recipient_type = str(data.get("recipient_type") or "ALL").upper()
+        # Drafts (is_published=False) are saved without notifying anyone; the
+        # default preserves the previous create-and-publish behaviour.
+        is_published = _truthy(data.get("is_published"), default=True)
 
         if not topic:
             return Response({"error": "Topic is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -154,6 +181,7 @@ class AssignmentListCreateView(APIView):
             platform_link=platform_link,
             start_date=start_date,
             deadline=deadline,
+            deadline_at=deadline_at,
             message=message,
             recipient_type=recipient_type,
             target_role=target_role,
@@ -161,6 +189,8 @@ class AssignmentListCreateView(APIView):
             target_batch=target_batch_obj,
             target_sub_batch=target_sub_batch_obj,
             audience=audience_label,
+            is_published=is_published,
+            published_at=timezone.now() if is_published else None,
             created_by=request.user,
         )
 
@@ -177,32 +207,13 @@ class AssignmentListCreateView(APIView):
         if recipients_to_create:
             AssignmentRecipient.objects.bulk_create(recipients_to_create, ignore_conflicts=True)
 
-        # Dispatch real-time WebSocket toast to trainee desktop assistants
-        msg_payload = {
-            "type": "trainee.notification",
-            "kind": "assignment",
-            "assignment_id": assignment.id,
-            "title": f"New Assignment: {topic}",
-            "message": f"[{subject}] {topic} — Due {deadline}. {message[:120]}",
-            "text": f"New Assignment: {topic} ({subject})",
-            "created_at": timezone.now().isoformat(),
-        }
-
-        if recipient_type == "ALL":
-            send_channel_message(notifier.ALL_GROUP, msg_payload)
-        elif recipient_type == "BATCH" and target_batches:
-            for b in target_batches:
-                send_channel_message(notifier.batch_group(b.full_code), msg_payload)
-        elif recipient_type == "SUB_BATCH" and target_sub_batches:
-            for sb in target_sub_batches:
-                send_channel_message(notifier.batch_group(sb.full_code), msg_payload)
-        else:
-            delivered = set()
-            for u in users:
-                ug = notifier.user_group(u.username)
-                if ug not in delivered:
-                    send_channel_message(ug, msg_payload)
-                    delivered.add(ug)
+        # Persist + push the structured "New Assignment Posted" notification to
+        # every eligible trainee (reuses the shared notification infrastructure).
+        if is_published:
+            try:
+                notify_new_assignment(assignment, users)
+            except Exception:
+                log.exception("Failed to send new-assignment notifications for assignment %s", assignment.id)
 
         serializer = AssignmentSerializer(assignment, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -234,6 +245,10 @@ class AssignmentDetailView(APIView):
         if not assignment:
             return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        was_published = assignment.is_published
+        old_deadline = assignment.deadline
+        old_deadline_at = assignment.deadline_at
+
         # Support fast deadline update or full partial edit
         if "deadline" in request.data and len(request.data) == 1:
             serializer = AssignmentDeadlineUpdateSerializer(assignment, data=request.data, partial=True)
@@ -243,18 +258,38 @@ class AssignmentDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        # Send deadline change notification to trainees if deadline updated
-        if "deadline" in request.data:
-            msg_payload = {
-                "type": "trainee.notification",
-                "kind": "assignment",
-                "assignment_id": assignment.id,
-                "title": f"Deadline Updated: {assignment.topic}",
-                "message": f"The deadline for {assignment.topic} has been updated to {assignment.deadline}.",
-                "text": f"Deadline updated: {assignment.topic}",
-                "created_at": timezone.now().isoformat(),
-            }
-            send_channel_message(notifier.ALL_GROUP, msg_payload)
+        now_published = assignment.is_published
+        deadline_changed = assignment.deadline != old_deadline or assignment.deadline_at != old_deadline_at
+        newly_published = now_published and not was_published
+
+        # Record the first publication time for a previously saved draft.
+        if newly_published:
+            if not assignment.published_at:
+                Assignment.objects.filter(pk=assignment.pk).update(published_at=timezone.now())
+                assignment.published_at = timezone.now()
+
+        # Retry missing announcement deliveries on edits to published assignments.
+        # The notification service deduplicates by assignment and recipient.
+        if now_published:
+            try:
+                notify_new_assignment(assignment)
+            except Exception:
+                log.exception("Failed to notify trainees about published assignment %s", assignment.id)
+
+        # A moved deadline re-arms both reminders and tells trainees about the change.
+        if deadline_changed and not newly_published:
+            Assignment.objects.filter(pk=assignment.pk).update(
+                reminder_24h_sent_at=None,
+                reminder_1h_sent_at=None,
+            )
+            AssignmentRecipient.objects.filter(assignment=assignment).update(
+                notified_24h_at=None,
+                notified_1h_at=None,
+            )
+            try:
+                notify_deadline_updated(assignment)
+            except Exception:
+                log.exception("Failed to notify trainees about deadline change for %s", assignment.id)
 
         return Response(AssignmentSerializer(assignment, context={"request": request}).data)
 
@@ -299,19 +334,16 @@ class AssignmentSubmissionView(APIView):
         except Assignment.DoesNotExist:
             return Response({"error": "Assignment not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        recipient, _ = AssignmentRecipient.objects.get_or_create(
-            assignment=assignment,
-            user=request.user,
-        )
-
         serializer = AssignmentSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        recipient.submission_link = serializer.validated_data.get("submission_link")
-        recipient.submission_text = serializer.validated_data.get("submission_text")
-        recipient.status = "SUBMITTED"
-        recipient.submitted_at = timezone.now()
-        recipient.save()
+        # Shared code path with the trainee desktop WebSocket consumer.
+        recipient = record_submission(
+            assignment,
+            request.user,
+            submission_text=serializer.validated_data.get("submission_text"),
+            submission_link=serializer.validated_data.get("submission_link"),
+        )
 
         return Response(AssignmentRecipientSerializer(recipient).data, status=status.HTTP_200_OK)
 
@@ -341,6 +373,22 @@ class AssignmentEvaluateView(APIView):
         recipient.status = "EVALUATED"
         recipient.evaluated_by = request.user
         recipient.evaluated_at = timezone.now()
+
+        # Faculty can send the submission back for another attempt, which
+        # re-arms the deadline reminders for that trainee.
+        resubmission_required = _truthy(request.data.get("resubmission_required"), default=False)
+        recipient.resubmission_required = resubmission_required
         recipient.save()
+
+        if resubmission_required:
+            AssignmentRecipient.objects.filter(pk=recipient.pk).update(
+                notified_24h_at=None,
+                notified_1h_at=None,
+            )
+
+        try:
+            notify_evaluated(recipient)
+        except Exception:
+            log.exception("Failed to send evaluation notification for recipient %s", recipient.id)
 
         return Response(AssignmentRecipientSerializer(recipient).data, status=status.HTTP_200_OK)

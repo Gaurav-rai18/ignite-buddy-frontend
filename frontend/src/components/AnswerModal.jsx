@@ -3,10 +3,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Activity,
+  AlertTriangle,
   Bell,
   Calendar,
   Check,
   CheckSquare,
+  ClipboardList,
   Clock,
   Copy,
   CornerLeftUp,
@@ -19,16 +21,19 @@ import {
   Folder,
   FolderOpen,
   FolderTree,
+  GraduationCap,
   HelpCircle,
   Info,
   Loader2,
   LogOut,
   MapPin,
+  Paperclip,
   Play,
   Plus,
   RefreshCw,
   Save,
   Search,
+  Send,
   Shield,
   ShieldAlert,
   Sparkles,
@@ -121,6 +126,185 @@ const WEEKDAYS = [
   { id: 4, short: "Fri", full: "Friday" },
 ];
 
+const ASSIGNMENT_STATUS = {
+  PENDING: { label: "Pending", cls: "pending" },
+  SUBMITTED: { label: "Submitted", cls: "submitted" },
+  EVALUATED: { label: "Evaluated", cls: "evaluated" },
+};
+
+/** Render an ISO deadline in the trainee's own timezone. */
+function formatDue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Short relative hint used on the deadline chip ("due in 3h"). */
+function dueHint(iso) {
+  if (!iso) return "";
+  const ms = new Date(iso).getTime() - Date.now();
+  if (Number.isNaN(ms)) return "";
+  const mins = Math.round(ms / 60000);
+  if (mins < 0) return "overdue";
+  if (mins < 60) return `due in ${mins}m`;
+  if (mins < 48 * 60) return `due in ${Math.round(mins / 60)}h`;
+  return `due in ${Math.round(mins / 1440)}d`;
+}
+
+/**
+ * One assignment the trainee can read, open its attachment and submit.
+ */
+function AssignmentCard({ assignment, focused, submitting, onSubmit }) {
+  const [text, setText] = useState(assignment.submission_text || "");
+  const [link, setLink] = useState(assignment.submission_link || "");
+  const [open, setOpen] = useState(Boolean(focused));
+
+  const status = ASSIGNMENT_STATUS[assignment.status] || ASSIGNMENT_STATUS.PENDING;
+  const canEdit = assignment.status !== "SUBMITTED" || assignment.resubmission_required;
+  const hasDraft = Boolean(text.trim() || link.trim());
+  const busy = submitting;
+
+  useEffect(() => {
+    if (focused) setOpen(true);
+  }, [focused]);
+
+  return (
+    <div
+      className={`assignment-card ${focused ? "is-focused" : ""} ${
+        assignment.is_past_due && canEdit ? "is-overdue" : ""
+      }`}
+      data-assignment-id={assignment.id}
+    >
+      <div className="assignment-card-head">
+        <div className="assignment-title-row">
+          <ClipboardList size={14} className="assignment-card-icon" />
+          <span className="assignment-title">{assignment.title}</span>
+          <span className={`assignment-status-pill ${status.cls}`}>{status.label}</span>
+        </div>
+
+        <div className="assignment-meta-row">
+          {assignment.subject && <span className="assignment-meta-chip">{assignment.subject}</span>}
+          {assignment.author_name && (
+            <span className="assignment-meta-chip">
+              <GraduationCap size={11} />
+              {assignment.author_name}
+            </span>
+          )}
+          {assignment.due_at && (
+            <span className={`assignment-meta-chip assignment-due ${assignment.is_past_due ? "past" : ""}`}>
+              <Clock size={11} />
+              {formatDue(assignment.due_at)}
+              {canEdit && <em>· {dueHint(assignment.due_at)}</em>}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {assignment.resubmission_required && (
+        <div className="assignment-banner warn">
+          <AlertTriangle size={13} />
+          <span>Your faculty asked for a resubmission. Please review the feedback and submit again.</span>
+        </div>
+      )}
+
+      {assignment.instructions && <p className="assignment-instructions">{assignment.instructions}</p>}
+
+      {assignment.platform_link && (
+        <button
+          type="button"
+          className="assignment-attachment"
+          title={assignment.platform_link}
+          onClick={() => window.open(assignment.platform_link, "_blank", "noopener")}
+        >
+          <Paperclip size={12} />
+          <span>{assignment.platform_link}</span>
+          <ExternalLink size={11} />
+        </button>
+      )}
+
+      {(assignment.grade || assignment.feedback) && (
+        <div className="assignment-result">
+          {assignment.grade && (
+            <span className="assignment-grade">
+              Grade: <b>{assignment.grade}</b>
+            </span>
+          )}
+          {assignment.feedback && <p className="assignment-feedback">{assignment.feedback}</p>}
+        </div>
+      )}
+
+      {assignment.status === "SUBMITTED" && !assignment.resubmission_required && (
+        <div className="assignment-banner ok">
+          <Check size={13} />
+          <span>
+            Submission received{assignment.submitted_at ? ` on ${formatDue(assignment.submitted_at)}` : ""}. Waiting for
+            evaluation.
+          </span>
+        </div>
+      )}
+
+      <div className="assignment-card-foot">
+        <button
+          type="button"
+          className="assignment-toggle-btn"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+        >
+          {open ? "Hide submission" : canEdit ? "Submit work" : "View my submission"}
+        </button>
+        {busy && (
+          <span className="assignment-busy">
+            <Loader2 size={12} className="spin" />
+            Sending...
+          </span>
+        )}
+      </div>
+
+      {open && (
+        <form
+          className="assignment-submit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!canEdit || busy || !hasDraft) return;
+            onSubmit({ assignment_id: assignment.id, submission_text: text, submission_link: link });
+          }}
+        >
+          <textarea
+            className="assignment-answer-field"
+            placeholder="Write your response or paste your work summary here..."
+            value={text}
+            readOnly={!canEdit}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <input
+            type="text"
+            className="assignment-link-field"
+            placeholder="Attachment / repository link (optional)"
+            value={link}
+            readOnly={!canEdit}
+            onChange={(e) => setLink(e.target.value)}
+          />
+          {canEdit ? (
+            <button type="submit" className="btn-primary-action full-width" disabled={busy || !hasDraft}>
+              <Send size={13} />
+              <span>{assignment.resubmission_required ? "Resubmit Assignment" : "Submit Assignment"}</span>
+            </button>
+          ) : (
+            <p className="assignment-locked-note">This assignment has already been submitted.</p>
+          )}
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function AnswerModal({
   conversation = [],
   turn,
@@ -129,6 +313,13 @@ export default function AnswerModal({
   vault = { tasks: [], notes: [] },
   filesView = null,
   scheduleView = null,
+  assignments = [],
+  assignmentsLoaded = false,
+  assignmentsLoading = false,
+  assignmentSubmittingId = null,
+  assignmentFocusId = null,
+  onFetchAssignments,
+  onSubmitAssignment,
   onFetchSchedule,
   onOpenPath,
   onListFolder,
@@ -140,6 +331,7 @@ export default function AnswerModal({
   busy,
 }) {
   const body = useRef(null);
+  const assignmentsBody = useRef(null);
   const stick = useRef(true);
   const [copied, setCopied] = useState(false);
 
@@ -212,6 +404,20 @@ export default function AnswerModal({
       onFetchSchedule?.();
     }
   }, [tab, allScheduleSlots?.length, onFetchSchedule]);
+
+  // Auto-fetch the trainee's assignment list the first time the tab is opened
+  useEffect(() => {
+    if (tab === "assignments" && !assignmentsLoaded && !assignmentsLoading) {
+      onFetchAssignments?.();
+    }
+  }, [tab, assignmentsLoaded, assignmentsLoading, onFetchAssignments]);
+
+  // Bring the assignment named by a notification into view
+  useEffect(() => {
+    if (tab !== "assignments" || !assignmentFocusId) return;
+    const node = assignmentsBody.current?.querySelector(`[data-assignment-id="${assignmentFocusId}"]`);
+    node?.scrollIntoView({ block: "center" });
+  }, [tab, assignmentFocusId, assignments]);
 
   const onScroll = () => {
     const el = body.current;
@@ -367,6 +573,7 @@ export default function AnswerModal({
           const TAB_CONFIG = {
             answer: { label: "Policies & Knowledge", icon: Shield },
             schedule: { label: "Schedule & Timetable", icon: Calendar },
+            assignments: { label: "Assignments", icon: ClipboardList },
             files: { label: "Files & Documents", icon: Folder },
             tasks: { label: "Tasks", icon: CheckSquare },
             notes: { label: "Notes", icon: FileText },
@@ -375,9 +582,12 @@ export default function AnswerModal({
           };
           const currentMeta = TAB_CONFIG[tab] || TAB_CONFIG.answer;
           const TabIcon = currentMeta.icon;
+          const pendingAssignments = assignments.filter((a) => a.status !== "SUBMITTED").length;
           const badge =
             tab === "schedule" && todaySlotsCount > 0
               ? `${todaySlotsCount} today`
+              : tab === "assignments" && pendingAssignments > 0
+              ? `${pendingAssignments} to submit`
               : tab === "files" && rawFiles.length > 0
               ? `${rawFiles.length} files`
               : tab === "tasks" && pendingTasks > 0
@@ -639,6 +849,59 @@ export default function AnswerModal({
                   </div>
                 );
               })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Assignments (Published by the admin/faculty panel) */}
+      {tab === "assignments" && (
+        <div className="assignments-panel">
+          <div className="assignments-toolbar">
+            <div className="assignments-summary">
+              <span>
+                {assignments.length} assignment{assignments.length === 1 ? "" : "s"}
+              </span>
+              {assignments.filter((a) => a.status !== "SUBMITTED").length > 0 && (
+                <span className="assignments-summary-pending">
+                  {assignments.filter((a) => a.status !== "SUBMITTED").length} awaiting submission
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="schedule-tool-btn icon-only"
+              onClick={() => onFetchAssignments?.()}
+              title="Refresh assignments from server"
+              aria-label="Refresh Assignments"
+            >
+              <RefreshCw size={12} className={assignmentsLoading ? "spin" : ""} />
+            </button>
+          </div>
+
+          <div className="assignments-scroll-list" ref={assignmentsBody}>
+            {assignmentsLoading && !assignmentsLoaded ? (
+              <div className="panel-empty-state">
+                <Loader2 size={28} className="empty-state-icon spin" />
+                <h3>Loading Assignments</h3>
+                <p>Fetching the work posted for your batch...</p>
+              </div>
+            ) : assignments.length === 0 ? (
+              <div className="panel-empty-state">
+                <ClipboardList size={28} className="empty-state-icon" />
+                <h3>No Assignments Yet</h3>
+                <p>Nothing has been posted for your batch. New assignments will appear here automatically.</p>
+              </div>
+            ) : (
+              assignments.map((a) => (
+                <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  focused={String(a.id) === String(assignmentFocusId)}
+                  submitting={String(a.id) === String(assignmentSubmittingId)}
+                  onSubmit={onSubmitAssignment}
+                />
+              ))
             )}
           </div>
         </div>

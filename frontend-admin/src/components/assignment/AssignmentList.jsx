@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Users, Send, Calendar, Clock, Link, Check } from 'lucide-react';
+import { BookOpen, Users, Send, Calendar, Clock, Link, Check, UploadCloud, ClipboardList } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { formatDate } from '../../utils/date';
 
@@ -11,6 +11,9 @@ export function AssignmentList({
   onCreateClick,
   deadlineUpdating = {},
   onUpdateDeadline,
+  onPublish,
+  publishingId = null,
+  onViewSubmissions,
 }) {
   // Local state for editable deadlines per card: { [id]: dateString }
   const [editDeadlines, setEditDeadlines] = useState({});
@@ -106,7 +109,9 @@ export function AssignmentList({
               <span className="entry-icon" aria-hidden="true">
                 <BookOpen size={15} />
               </span>
-              <span className="published-tag">Published</span>
+              <span className={`published-tag ${item.is_published === false ? 'draft-tag' : ''}`}>
+                {item.is_published === false ? 'Draft' : 'Published'}
+              </span>
             </div>
 
             {/* Topic & Subject */}
@@ -173,6 +178,36 @@ export function AssignmentList({
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Actions: publish draft / review submissions */}
+            <div className="assignment-entry-actions">
+              {item.is_published === false && onPublish && (
+                <button
+                  type="button"
+                  className="primary-button compact-button"
+                  disabled={publishingId === item.id}
+                  onClick={() => onPublish(item.id)}
+                  title="Publish this draft and notify students"
+                >
+                  <UploadCloud size={13} aria-hidden="true" />
+                  {publishingId === item.id ? 'Publishing...' : 'Publish'}
+                </button>
+              )}
+              {onViewSubmissions && (
+                <button
+                  type="button"
+                  className="secondary-button compact-button"
+                  onClick={() => onViewSubmissions(item.id)}
+                  title="Review and evaluate submissions"
+                >
+                  <ClipboardList size={13} aria-hidden="true" />
+                  Submissions
+                  {typeof item.submissions_count === 'number' && item.recipients_count
+                    ? ` (${item.submissions_count}/${item.recipients_count})`
+                    : ''}
+                </button>
+              )}
             </div>
           </article>
         ))

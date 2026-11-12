@@ -64,10 +64,12 @@ export default function App() {
 
   // Track and persist campus announcements in recent history
   const lastToast = state.toasts[state.toasts.length - 1];
+  const isAssignmentToast = (t) => Boolean(t) && (t.kind === "assignment" || t.category === "assignment");
   useEffect(() => {
     if (
       lastToast &&
       lastToast.id !== lastToastIdRef.current &&
+      !isAssignmentToast(lastToast) &&
       (lastToast.kind === "broadcast" || lastToast.message)
     ) {
       lastToastIdRef.current = lastToast.id;
@@ -159,6 +161,49 @@ export default function App() {
       dismiss();
     }
   }, [logout, dispatch, dismiss]);
+
+  // ---- Assignments (published by the admin/faculty panel) ----
+  const fetchAssignments = useCallback(() => {
+    dispatch({ type: "assignments_loading", loading: true });
+    send({ type: "assignments_get" });
+  }, [dispatch, send]);
+
+  const submitAssignment = useCallback(
+    ({ assignment_id, submission_text = "", submission_link = "" }) => {
+      dispatch({ type: "assignment_submitting", id: assignment_id ?? null });
+      send({ type: "assignment_submit", assignment_id, submission_text, submission_link });
+    },
+    [dispatch, send]
+  );
+
+  const openAssignment = useCallback(
+    (id = null) => {
+      dispatch({ type: "assignment_focus", id });
+      fetchAssignments();
+    },
+    [dispatch, fetchAssignments]
+  );
+
+  // A notification carries action_url ("/assignments/12") — open that assignment.
+  const openAssignmentFromToast = useCallback(
+    (t) => {
+      const match = /\/(\d+)\s*$/.exec(t?.action_url || "");
+      openAssignment(match ? Number(match[1]) : null);
+    },
+    [openAssignment]
+  );
+
+  // Load the trainee's assignments as soon as they sign in.
+  useEffect(() => {
+    if (state.authenticated === true && state.link) fetchAssignments();
+  }, [state.authenticated, state.link, fetchAssignments]);
+
+  // A new-assignment / reminder / evaluation notification refreshes the list.
+  useEffect(() => {
+    if (isAssignmentToast(lastToast)) {
+      fetchAssignments();
+    }
+  }, [lastToast, fetchAssignments]);
 
   // Stop listening as soon as user starts writing or focuses input
   const handleTyping = useCallback(() => {
@@ -325,6 +370,13 @@ export default function App() {
           vault={state.vault}
           filesView={state.filesView}
           scheduleView={state.scheduleView}
+          assignments={state.assignments}
+          assignmentsLoaded={state.assignmentsLoaded}
+          assignmentsLoading={state.assignmentsLoading}
+          assignmentSubmittingId={state.assignmentSubmittingId}
+          assignmentFocusId={state.assignmentFocusId}
+          onFetchAssignments={fetchAssignments}
+          onSubmitAssignment={submitAssignment}
           onFetchSchedule={() => send({ type: "schedule_get" })}
           onOpenPath={(path) => send({ type: "open_path", path })}
           onListFolder={(path) => send({ type: "list_folder", path })}
@@ -374,6 +426,7 @@ export default function App() {
               dispatch({ type: "dismiss_toast", id });
             }}
             onOpenBroadcast={(b) => setActiveBroadcast({ ...b, initialExpanded: true })}
+            onOpenAssignment={openAssignmentFromToast}
           />
         )}
 

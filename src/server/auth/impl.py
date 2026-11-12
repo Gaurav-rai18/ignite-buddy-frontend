@@ -60,7 +60,7 @@ def _b64url_decode(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + pad)
 
 
-def issue_jwt(user_id: str, name: str, batch: str = "default") -> str:
+def issue_jwt(user_id: str, name: str, batch: str = "default", account_user_id: int | None = None) -> str:
     """Issue a signed JWT for a trainee. Requires config.JWT_SECRET."""
     import json
     if not config.JWT_SECRET:
@@ -71,6 +71,7 @@ def issue_jwt(user_id: str, name: str, batch: str = "default") -> str:
         "sub": user_id,
         "name": name,
         "batch": batch,
+        "account_user_id": account_user_id,
         "iat": now,
         "exp": now + int(config.JWT_TTL_HOURS) * 3600,
     }
@@ -97,10 +98,19 @@ def verify_jwt(token: str) -> User | None:
     uid = payload.get("sub")
     if not uid:
         return None
+    try:
+        account_user_id = (
+            int(payload["account_user_id"])
+            if payload.get("account_user_id") is not None
+            else None
+        )
+    except (TypeError, ValueError):
+        return None
     return User(
         id=str(uid),
         name=str(payload.get("name") or uid),
         batch=str(payload.get("batch") or "default"),
+        account_user_id=account_user_id,
     )
 
 
