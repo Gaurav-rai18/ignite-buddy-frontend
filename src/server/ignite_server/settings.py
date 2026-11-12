@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "server.apps.documents",
     "server.apps.dashboard",
     "server.apps.telemetry",
+    "server.apps.assignments",
 ]
 
 MIDDLEWARE = [

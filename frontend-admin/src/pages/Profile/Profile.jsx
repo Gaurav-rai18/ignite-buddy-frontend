@@ -663,12 +663,12 @@ export function Profile({ onNotify }) {
               <div className="activity-item-compact">
                 <span className="activity-dot" />
                 <div style={{ flex: 1 }}>
-                  <b>Zero Trust Security Policy</b>
+                  <b>Session Security Policy</b>
                   <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--color-text-secondary)' }}>
                     Tokens stored purely in memory. Auto-locks after 15 min of inactivity.
                   </p>
                 </div>
-                <span className="activity-pill safe">ENFORCED</span>
+                <span className="activity-pill safe">ACTIVE</span>
               </div>
             </div>
           </section>

@@ -422,7 +422,7 @@ export function Settings({ onNotify }) {
               <div>
                 <h3 style={{ margin: 0, fontSize: '15px' }}>Security &amp; Inactivity Policy</h3>
                 <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                  Zero Trust session timeout and password complexity requirements
+                  Session timeout and password security policies
                 </p>
               </div>
             </div>
@@ -435,7 +435,7 @@ export function Settings({ onNotify }) {
                   onChange={(e) => handleFieldChange('session_timeout_minutes', parseInt(e.target.value, 10))}
                   className="styled-input"
                 >
-                  <option value={15}>15 Minutes (Zero Trust Standard)</option>
+                  <option value={15}>15 Minutes (Standard)</option>
                   <option value={30}>30 Minutes</option>
                   <option value={60}>60 Minutes</option>
                   <option value={120}>2 Hours</option>

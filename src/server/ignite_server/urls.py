@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/settings/export/", DataExportView.as_view(), name="data-export"),
     path("api/schedules/", include("server.apps.schedules.urls")),
     path("api/documents/", include("server.apps.documents.urls")),
+    path("api/assignments/", include("server.apps.assignments.urls")),
     path("api/dashboard/", DashboardSummaryView.as_view(), name="dashboard-summary"),
 ]
 

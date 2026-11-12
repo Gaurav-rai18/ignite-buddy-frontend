@@ -36,3 +36,7 @@ Thumbs.db
 *.db
 *.sqlite3
 ASSISTANT_DATA/
+
+# Reference project
+Ignite_Buddy-with-Assignments/
+

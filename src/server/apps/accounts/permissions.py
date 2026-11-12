@@ -65,3 +65,30 @@ class CanManageBroadcasts(BasePermission):
                 or request.user.role in self.ALLOWED_ROLES
             )
         )
+
+class CanManageAssignments(BasePermission):
+    """
+    Allows admin, faculty (TA), HR, and manager roles to create,
+    update, evaluate, and delete assignments.
+    Superusers and staff always have full access.
+    """
+
+    message = "You do not have permission to manage assignments."
+
+    ALLOWED_ROLES = {
+        "ADMIN",
+        "TA",
+        "HR",
+        "MANAGER",
+    }
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and (
+                request.user.is_superuser
+                or request.user.is_staff
+                or request.user.role in self.ALLOWED_ROLES
+            )
+        )

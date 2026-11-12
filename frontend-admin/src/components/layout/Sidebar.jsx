@@ -7,6 +7,7 @@ import {
   Bot,
   Users,
   FileText,
+  BookOpen,
   X,
   MoreVertical,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { path: '/buddy', name: 'Buddy Control', icon: Bot, label: 'Exam-time control' },
   { path: '/users', name: 'Manage Users', icon: Users, label: 'Add, edit & roles' },
   { path: '/documents', name: 'Add Documents', icon: FileText, label: 'Documents & sharing' },
+  { path: '/assignments', name: 'Assignments', icon: BookOpen, label: 'Coursework & deadlines' },
 ];
 
 export function Sidebar({ mobileNav, onCloseMobileNav, broadcastCount = 0, onSignOut, user }) {

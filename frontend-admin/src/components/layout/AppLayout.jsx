@@ -27,6 +27,8 @@ export function AppLayout({ broadcastCount = 0, toastMessage = '', onNotify }) {
         return 'Manage Users';
       case '/documents':
         return 'Add Documents';
+      case '/assignments':
+        return 'Assignments';
       case '/profile':
         return 'My Profile';
       case '/roles-permissions':

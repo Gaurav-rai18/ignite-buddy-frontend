@@ -22,6 +22,7 @@ const MODULES = [
   { key: 'buddy', name: 'Buddy Control Center', desc: 'Master AI assistant toggle, exam lockdowns, and guardrail policies' },
   { key: 'users', name: 'Manage Users & Trainees', desc: 'Directory management, role assignment, and bulk CSV enrollment' },
   { key: 'documents', name: 'Add Documents (Knowledge Base)', desc: 'Upload syllabus PDFs and trigger RAG vector indexing' },
+  { key: 'assignments', name: 'Assignments & Coursework', desc: 'Publish, track, and grade student assignments and submissions' },
   { key: 'hierarchy', name: 'Batch & Cohort Hierarchy', desc: 'Manage Cohorts, Major Batches, Sub-batches, and Lab venues' },
   { key: 'roles_permissions', name: 'Roles & Permissions', desc: 'Configure module access control and security permissions' },
   { key: 'system_preferences', name: 'System Preferences', desc: 'Configure workspace identity, academic dates, and global preferences' },

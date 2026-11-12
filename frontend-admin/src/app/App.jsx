@@ -10,6 +10,7 @@ import { Schedule } from '../pages/Schedule/Schedule';
 import { BuddyControl } from '../pages/BuddyControl/BuddyControl';
 import { ManageUsers } from '../pages/ManageUsers/ManageUsers';
 import { AddDocuments } from '../pages/AddDocuments/AddDocuments';
+import { Assignments } from '../pages/Assignments/Assignments';
 import { Profile } from '../pages/Profile/Profile';
 import { RolesPermissions } from '../pages/RolesPermissions/RolesPermissions';
 import { Settings } from '../pages/Settings/Settings';
@@ -116,6 +117,7 @@ function AppRoutes() {
         <Route path="buddy" element={<BuddyControl onNotify={notify} />} />
         <Route path="users" element={<ManageUsers onNotify={notify} />} />
         <Route path="documents" element={<AddDocuments onNotify={notify} />} />
+        <Route path="assignments" element={<Assignments onNotify={notify} />} />
         <Route path="profile" element={<Profile onNotify={notify} />} />
         <Route path="roles-permissions" element={<RolesPermissions onNotify={notify} />} />
         <Route path="settings" element={<Settings onNotify={notify} />} />
