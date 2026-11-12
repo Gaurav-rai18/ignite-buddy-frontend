@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   User as UserIcon,
   Mail,
-  Phone,
   Building2,
   Briefcase,
   IdCard,
@@ -38,7 +37,6 @@ export function Profile({ onNotify }) {
     last_name: '',
     username: '',
     email: '',
-    phone_number: '',
     department: '',
     designation: '',
     profile_picture: '',
@@ -62,7 +60,6 @@ export function Profile({ onNotify }) {
         last_name: user.last_name || '',
         username: user.username || '',
         email: user.email || '',
-        phone_number: user.phone_number || '',
         department: user.department || 'TCS Ignite Training',
         designation: user.designation || 'Administrator',
         profile_picture: user.profile_picture || '',
@@ -107,7 +104,6 @@ export function Profile({ onNotify }) {
         last_name: formData.last_name.trim(),
         username: formData.username.trim() || `${formData.first_name} ${formData.last_name}`.trim(),
         email: formData.email.trim(),
-        phone_number: formData.phone_number.trim(),
         department: formData.department.trim(),
         designation: formData.designation.trim(),
         profile_picture: formData.profile_picture.trim(),
@@ -137,7 +133,6 @@ export function Profile({ onNotify }) {
         last_name: user.last_name || '',
         username: user.username || '',
         email: user.email || '',
-        phone_number: user.phone_number || '',
         department: user.department || 'TCS Ignite Training',
         designation: user.designation || 'Administrator',
         profile_picture: user.profile_picture || '',
@@ -306,7 +301,7 @@ export function Profile({ onNotify }) {
                 <div>
                   <h3 style={{ margin: 0, fontSize: '15px' }}>Personal Information</h3>
                   <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                    Personal details and contact information
+                    Personal and account details
                   </p>
                 </div>
               </div>
@@ -345,38 +340,20 @@ export function Profile({ onNotify }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '14px' }}>
-                <div className="field-group">
-                  <label htmlFor="prof-email" style={{ fontSize: '12px', fontWeight: '600' }}>
-                    Email Address
-                  </label>
-                  <input
-                    id="prof-email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleFieldChange}
-                    disabled={!isEditing}
-                    required
-                    className="styled-input"
-                  />
-                </div>
-
-                <div className="field-group">
-                  <label htmlFor="prof-phone" style={{ fontSize: '12px', fontWeight: '600' }}>
-                    Phone Number
-                  </label>
-                  <input
-                    id="prof-phone"
-                    name="phone_number"
-                    type="tel"
-                    value={formData.phone_number}
-                    onChange={handleFieldChange}
-                    disabled={!isEditing}
-                    placeholder="+91 98765 43210"
-                    className="styled-input"
-                  />
-                </div>
+              <div className="field-group" style={{ marginTop: '14px' }}>
+                <label htmlFor="prof-email" style={{ fontSize: '12px', fontWeight: '600' }}>
+                  Email Address
+                </label>
+                <input
+                  id="prof-email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleFieldChange}
+                  disabled={!isEditing}
+                  required
+                  className="styled-input"
+                />
               </div>
 
               <div className="field-group" style={{ marginTop: '14px' }}>

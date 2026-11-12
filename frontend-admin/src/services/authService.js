@@ -68,7 +68,6 @@ export const authService = {
       full_name: data.full_name || compositeName || data.username || data.email,
       role: data.role,
       employee_id: data.employee_id || '',
-      phone_number: data.phone_number || '',
       department: data.department || 'TCS Ignite Training',
       designation: data.designation || 'Administrator',
       profile_picture: data.profile_picture || '',

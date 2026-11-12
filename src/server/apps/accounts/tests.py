@@ -86,15 +86,17 @@ class UserProfileAndSecurityTests(TestCase):
     def test_patch_own_profile(self):
         response = self.client.patch(
             "/api/accounts/me/",
-            {"phone_number": "+91 9999988888", "department": "TCS Ignite Innovations"},
+            {"department": "TCS Ignite Innovations", "designation": "Lead Architect"},
             format="json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["phone_number"], "+91 9999988888")
+        self.assertNotIn("phone_number", response.data)
         self.assertEqual(response.data["department"], "TCS Ignite Innovations")
+        self.assertEqual(response.data["designation"], "Lead Architect")
 
         self.user.refresh_from_db()
-        self.assertEqual(self.user.phone_number, "+91 9999988888")
+        self.assertEqual(self.user.department, "TCS Ignite Innovations")
+        self.assertEqual(self.user.designation, "Lead Architect")
 
     def test_protected_fields_cannot_be_escalated(self):
         response = self.client.patch(

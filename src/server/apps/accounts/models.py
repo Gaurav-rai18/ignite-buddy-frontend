@@ -162,7 +162,6 @@ class User(AbstractUser):
         ],
     )
     accops_id = models.CharField(max_length=128, blank=True)  # Accops VDI identifier
-    phone_number = models.CharField(max_length=20, blank=True, default="")
     department = models.CharField(max_length=100, blank=True, default="TCS Ignite Training")
     designation = models.CharField(max_length=100, blank=True, default="Administrator")
     profile_picture = models.TextField(blank=True, default="")

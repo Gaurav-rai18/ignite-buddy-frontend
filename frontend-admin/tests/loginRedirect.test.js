@@ -86,5 +86,26 @@ describe('Login & Default Landing Page Policy Tests', () => {
       'authService must not persist active user into sessionStorage'
     );
   });
+
+  it('Profile.jsx has completely removed phone/mobile number fields and labels', () => {
+    const profilePath = resolve('src/pages/Profile/Profile.jsx');
+    const content = readFileSync(profilePath, 'utf8');
+
+    assert.doesNotMatch(
+      content,
+      /phone_number/i,
+      'Profile.jsx must not have phone_number field or state'
+    );
+    assert.doesNotMatch(
+      content,
+      /Phone Number/i,
+      'Profile.jsx must not display Phone Number label'
+    );
+    assert.doesNotMatch(
+      content,
+      /mobile/i,
+      'Profile.jsx must not have any mobile number references'
+    );
+  });
 });
 
